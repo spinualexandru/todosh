@@ -1,54 +1,98 @@
-import { Box, render, Text, useInput, useIsScreenReaderEnabled } from "ink";
-import { useState } from "react";
+import {
+	Box,
+	render,
+	Text,
+	useApp,
+	useInput,
+	useIsScreenReaderEnabled,
+	useStdout,
+} from "ink";
+import { useEffect, useMemo, useState } from "react";
 
-const items = ["Red", "Green", "Blue", "Yellow", "Magenta", "Cyan"];
+const banner = [
+	" __        __   _                            _          _____          _           _     ",
+	" \\ \\      / /__| | ___ ___  _ __ ___   ___  | |_ ___   |_   _|__   __| | ___  ___| |__  ",
+	"  \\ \\ /\\ / / _ \\ |/ __/ _ \\| '_ ` _ \\ / _ \\ | __/ _ \\    | |/ _ \\ / _` |/ _ \\/ __| '_ \\ ",
+	"   \\ V  V /  __/ | (_| (_) | | | | | |  __/ | || (_) |   | | (_) | (_| | (_) \\__ \\ | | |",
+	"    \\_/\\_/ \\___|_|\\___\\___/|_| |_| |_|\\___|  \\__\\___/    |_|\\___/ \\__,_|\\___/|___/_| |_|",
+];
 
-function SelectInput() {
-	const [selectedIndex, setSelectedIndex] = useState(0);
+function getTerminalSize(stdout: NodeJS.WriteStream | null | undefined): {
+	columns: number;
+	rows: number;
+} {
+	const columns = typeof stdout?.columns === "number" ? stdout.columns : 80;
+	const rows = typeof stdout?.rows === "number" ? stdout.rows : 24;
+	return {
+		columns: Math.max(20, columns),
+		rows: Math.max(8, rows),
+	};
+}
+
+function App() {
+	const { exit } = useApp();
+	const { stdout } = useStdout();
 	const isScreenReaderEnabled = useIsScreenReaderEnabled();
+	const [{ columns, rows }, setTerminalSize] = useState(() =>
+		getTerminalSize(stdout),
+	);
+
+	useEffect(() => {
+		setTerminalSize(getTerminalSize(stdout));
+		const handleResize = () => setTerminalSize(getTerminalSize(stdout));
+		stdout?.on?.("resize", handleResize);
+		return () => {
+			stdout?.off?.("resize", handleResize);
+		};
+	}, [stdout]);
+
+	useEffect(() => {
+		// Clear screen + go home; hide cursor for a TUI feel.
+		stdout?.write("\x1b[2J\x1b[H\x1b[?25l");
+		return () => {
+			stdout?.write("\x1b[?25h");
+		};
+	}, [stdout]);
 
 	useInput((input, key) => {
-		if (key.upArrow) {
-			setSelectedIndex((previousIndex) =>
-				previousIndex === 0 ? items.length - 1 : previousIndex - 1,
-			);
-		}
-
-		if (key.downArrow) {
-			setSelectedIndex((previousIndex) =>
-				previousIndex === items.length - 1 ? 0 : previousIndex + 1,
-			);
-		}
-
-		if (isScreenReaderEnabled) {
-			const number = Number.parseInt(input, 10);
-			if (!Number.isNaN(number) && number > 0 && number <= items.length) {
-				setSelectedIndex(number - 1);
-			}
+		if (key.escape || input.toLowerCase() === "q") {
+			exit();
 		}
 	});
 
-	return (
-		<Box flexDirection="column" aria-role="list">
-			<Text>Select a color:</Text>
-			{items.map((item, index) => {
-				const isSelected = index === selectedIndex;
-				const label = isSelected ? `> ${item}` : `  ${item}`;
-				const screenReaderLabel = `${index + 1}. ${item}`;
+	const content = useMemo(
+		() =>
+			isScreenReaderEnabled ? (
+		<Box flexDirection="column" alignItems="center">
+			<Text>Welcome to Todosh</Text>
+			<Text dimColor>Press q or Esc to quit.</Text>
+		</Box>
+	) : (
+		<Box flexDirection="column" alignItems="center">
+			{banner.map((line) => (
+				<Text key={line}>{line}</Text>
+			))}
+			<Text dimColor>Press q or Esc to quit.</Text>
+		</Box>
+	),
+		[isScreenReaderEnabled],
+	);
 
-				return (
-					<Box
-						key={item}
-						aria-role="listitem"
-						aria-state={{ selected: isSelected }}
-						aria-label={isScreenReaderEnabled ? screenReaderLabel : undefined}
-					>
-						<Text color={isSelected ? "blue" : undefined}>{label}</Text>
-					</Box>
-				);
-			})}
+	return (
+		<Box
+			width={columns}
+			height={rows}
+			borderStyle="round"
+			borderColor="cyan"
+			paddingX={2}
+			paddingY={1}
+			justifyContent="center"
+			alignItems="center"
+			aria-label="Welcome to Todosh"
+		>
+			{content}
 		</Box>
 	);
 }
 
-render(<SelectInput />);
+render(<App />);
