@@ -1,17 +1,20 @@
 import { Column } from "@components/board";
 import { Confirm, Input, Modal } from "@components/common";
 import { Shell } from "@components/layout";
+import { FilterMenu, SearchBar } from "@components/search";
 import {
 	getTerminalSize,
 	useBoards,
+	useFilter,
 	useKeymap,
 	useRouter,
+	useSearch,
 	useSettings,
 } from "@hooks";
 import { useTasks } from "@hooks/useTasks";
 import type { TaskStatus, TaskWithTags } from "@types";
 import { Box, Text, useStdout } from "ink";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface BoardViewProps {
 	boardId: number;
@@ -30,16 +33,31 @@ export function BoardView({ boardId }: BoardViewProps) {
 	const { stdout } = useStdout();
 	const { rows } = getTerminalSize(stdout);
 	const { getBoard } = useBoards();
-	const {
-		tasksByStatus,
-		isLoading,
-		createTask,
-		updateTask,
-		deleteTask,
-		moveTask,
-	} = useTasks(boardId);
+	const { tasks, isLoading, createTask, updateTask, deleteTask, moveTask } =
+		useTasks(boardId);
 	const { navigate, goBack } = useRouter();
 	const { settings } = useSettings();
+
+	const {
+		query,
+		setQuery,
+		results: searchResults,
+		isSearching,
+		openSearch,
+		closeSearch,
+		resultCount,
+	} = useSearch(tasks);
+
+	const {
+		filter,
+		filteredTasks,
+		setStatusFilter,
+		setPriorityFilter,
+		clearFilters,
+		isFiltering,
+		closeFilter,
+		hasActiveFilters,
+	} = useFilter(searchResults);
 
 	const board = getBoard(boardId);
 
@@ -54,14 +72,24 @@ export function BoardView({ boardId }: BoardViewProps) {
 	const [modal, setModal] = useState<ModalState>({ type: "none" });
 	const [inputValue, setInputValue] = useState("");
 
+	const tasksByStatus = useMemo(
+		() => ({
+			todo: filteredTasks.filter((t) => t.status === "todo"),
+			doing: filteredTasks.filter((t) => t.status === "doing"),
+			done: filteredTasks.filter((t) => t.status === "done"),
+		}),
+		[filteredTasks],
+	);
+
 	const isModalOpen = modal.type !== "none";
+	const isInputActive = isSearching || isFiltering || isModalOpen;
 	const currentStatus = statuses[focusedColumn] ?? "todo";
 	const currentTasks = tasksByStatus[currentStatus];
 	const currentIndex = selectedIndices[currentStatus];
 	const selectedTask = currentTasks[currentIndex];
 
 	useKeymap({
-		isActive: !isModalOpen,
+		isActive: !isInputActive,
 		handlers: {
 			onUp: () => {
 				setSelectedIndices((prev) => ({
@@ -113,8 +141,13 @@ export function BoardView({ boardId }: BoardViewProps) {
 					setModal({ type: "move", task: selectedTask });
 				}
 			},
+			onSearch: openSearch,
 			onBack: () => {
-				goBack();
+				if (hasActiveFilters) {
+					clearFilters();
+				} else {
+					goBack();
+				}
 			},
 			onToggleView: () => {
 				navigate({ view: "table", boardId });
@@ -176,11 +209,43 @@ export function BoardView({ boardId }: BoardViewProps) {
 		);
 	}
 
-	const columnHeight = rows - 6;
+	const searchBarHeight = isSearching ? 3 : 0;
+	const filterMenuHeight = isFiltering ? 5 : 0;
+	const columnHeight = rows - 6 - searchBarHeight - filterMenuHeight;
 	const columnWidth = Math.floor((80 - 6) / 3);
 
 	return (
 		<Shell title={board.name} breadcrumbs={["Boards", board.name]}>
+			{isSearching && (
+				<SearchBar
+					value={query}
+					onChange={setQuery}
+					onClose={closeSearch}
+					resultCount={resultCount}
+					useNerdfonts={settings.ui.useNerdfonts}
+				/>
+			)}
+
+			{isFiltering && (
+				<FilterMenu
+					filter={filter}
+					onStatusChange={setStatusFilter}
+					onPriorityChange={setPriorityFilter}
+					onClear={clearFilters}
+					onClose={closeFilter}
+					useNerdfonts={settings.ui.useNerdfonts}
+				/>
+			)}
+
+			{!isSearching && !isFiltering && (query || hasActiveFilters) && (
+				<Box marginBottom={1} gap={2}>
+					{query && <Text dimColor>Search: "{query}"</Text>}
+					{hasActiveFilters && (
+						<Text dimColor>Filters active (Esc to clear)</Text>
+					)}
+				</Box>
+			)}
+
 			<Box gap={1}>
 				{statuses.map((status, columnIndex) => (
 					<Column
@@ -188,7 +253,7 @@ export function BoardView({ boardId }: BoardViewProps) {
 						status={status}
 						tasks={tasksByStatus[status]}
 						selectedIndex={selectedIndices[status]}
-						isFocused={focusedColumn === columnIndex}
+						isFocused={focusedColumn === columnIndex && !isInputActive}
 						useNerdfonts={settings.ui.useNerdfonts}
 						width={columnWidth}
 						height={columnHeight}

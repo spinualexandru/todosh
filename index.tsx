@@ -1,6 +1,19 @@
-import { AppProviders, BoardView, DashboardView, TableView } from "@components";
+import {
+	AppProviders,
+	BoardView,
+	DashboardView,
+	DetailView,
+	TableView,
+} from "@components";
 import { useKeymap, useRouter, useSettings } from "@hooks";
+import { startSocketServer, stopSocketServer } from "@lib/ipc";
+import { loadSettings } from "@lib/settings";
 import { render, Text, useApp } from "ink";
+
+const settings = loadSettings();
+if (settings.ipc.enabled) {
+	startSocketServer();
+}
 
 function AppContent() {
 	const { exit } = useApp();
@@ -9,11 +22,15 @@ function AppContent() {
 
 	useKeymap({
 		handlers: {
-			onQuit: () => exit(),
+			onQuit: () => {
+				stopSocketServer();
+				exit();
+			},
 			onBack: () => {
 				if (canGoBack) {
 					goBack();
 				} else {
+					stopSocketServer();
 					exit();
 				}
 			},
@@ -32,9 +49,7 @@ function AppContent() {
 		case "table":
 			return <TableView boardId={route.boardId} />;
 		case "detail":
-			return (
-				<Text>Detail view coming in Phase 5 (taskId: {route.taskId})</Text>
-			);
+			return <DetailView boardId={route.boardId} taskId={route.taskId} />;
 		default:
 			return <DashboardView />;
 	}

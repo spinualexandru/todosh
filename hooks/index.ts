@@ -1,7 +1,10 @@
 export { getTerminalSize } from "./getTerminalSize";
 export { useBoards } from "./useBoards";
+export { useComments } from "./useComments";
 export { useDatabase } from "./useDatabase";
+export { useFilter } from "./useFilter";
 export { getKeybindHint, useKeymap } from "./useKeymap";
 export { useRouter } from "./useRouter";
+export { useSearch } from "./useSearch";
 export { useSettings } from "./useSettings";
 export { useTasks } from "./useTasks";

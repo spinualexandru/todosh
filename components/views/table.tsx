@@ -1,11 +1,14 @@
 import { Confirm, Input, Modal } from "@components/common";
 import { Shell } from "@components/layout";
+import { FilterMenu, SearchBar } from "@components/search";
 import { type ColumnConfig, TableHeader, TableRow } from "@components/table";
 import {
 	getTerminalSize,
 	useBoards,
+	useFilter,
 	useKeymap,
 	useRouter,
+	useSearch,
 	useSettings,
 } from "@hooks";
 import { useTasks } from "@hooks/useTasks";
@@ -35,6 +38,27 @@ export function TableView({ boardId }: TableViewProps) {
 	const { navigate, goBack } = useRouter();
 	const { settings } = useSettings();
 
+	const {
+		query,
+		setQuery,
+		results: searchResults,
+		isSearching,
+		openSearch,
+		closeSearch,
+		resultCount,
+	} = useSearch(tasks);
+
+	const {
+		filter,
+		filteredTasks,
+		setStatusFilter,
+		setPriorityFilter,
+		clearFilters,
+		isFiltering,
+		closeFilter,
+		hasActiveFilters,
+	} = useFilter(searchResults);
+
 	const board = getBoard(boardId);
 
 	const [selectedIndex, setSelectedIndex] = useState(0);
@@ -42,7 +66,8 @@ export function TableView({ boardId }: TableViewProps) {
 	const [inputValue, setInputValue] = useState("");
 
 	const isModalOpen = modal.type !== "none";
-	const selectedTask = tasks[selectedIndex];
+	const isInputActive = isSearching || isFiltering || isModalOpen;
+	const selectedTask = filteredTasks[selectedIndex];
 
 	const tableColumns: ColumnConfig[] = useMemo(() => {
 		const availableWidth = termCols - 6;
@@ -56,10 +81,11 @@ export function TableView({ boardId }: TableViewProps) {
 	}, [termCols]);
 
 	useKeymap({
-		isActive: !isModalOpen,
+		isActive: !isInputActive,
 		handlers: {
 			onUp: () => setSelectedIndex((i) => Math.max(0, i - 1)),
-			onDown: () => setSelectedIndex((i) => Math.min(tasks.length - 1, i + 1)),
+			onDown: () =>
+				setSelectedIndex((i) => Math.min(filteredTasks.length - 1, i + 1)),
 			onSelect: () => {
 				if (selectedTask) {
 					navigate({
@@ -89,7 +115,14 @@ export function TableView({ boardId }: TableViewProps) {
 					setModal({ type: "move", task: selectedTask });
 				}
 			},
-			onBack: () => goBack(),
+			onSearch: openSearch,
+			onBack: () => {
+				if (hasActiveFilters) {
+					clearFilters();
+				} else {
+					goBack();
+				}
+			},
 			onToggleView: () => navigate({ view: "board", boardId }),
 		},
 	});
@@ -145,24 +178,65 @@ export function TableView({ boardId }: TableViewProps) {
 		);
 	}
 
-	const maxVisibleRows = rows - 8;
+	const searchBarHeight = isSearching ? 3 : 0;
+	const filterMenuHeight = isFiltering ? 5 : 0;
+	const filterIndicatorHeight =
+		!isSearching && !isFiltering && (query || hasActiveFilters) ? 1 : 0;
+	const maxVisibleRows =
+		rows - 8 - searchBarHeight - filterMenuHeight - filterIndicatorHeight;
 	const halfVisible = Math.floor(maxVisibleRows / 2);
 	let startIndex = Math.max(0, selectedIndex - halfVisible);
-	const endIndex = Math.min(tasks.length, startIndex + maxVisibleRows);
+	const endIndex = Math.min(filteredTasks.length, startIndex + maxVisibleRows);
 	if (endIndex - startIndex < maxVisibleRows) {
 		startIndex = Math.max(0, endIndex - maxVisibleRows);
 	}
-	const visibleTasks = tasks.slice(startIndex, endIndex);
+	const visibleTasks = filteredTasks.slice(startIndex, endIndex);
 
 	return (
 		<Shell
 			title={`${board.name} (Table)`}
 			breadcrumbs={["Boards", board.name, "Table"]}
 		>
-			{tasks.length === 0 ? (
+			{isSearching && (
+				<SearchBar
+					value={query}
+					onChange={setQuery}
+					onClose={closeSearch}
+					resultCount={resultCount}
+					useNerdfonts={settings.ui.useNerdfonts}
+				/>
+			)}
+
+			{isFiltering && (
+				<FilterMenu
+					filter={filter}
+					onStatusChange={setStatusFilter}
+					onPriorityChange={setPriorityFilter}
+					onClear={clearFilters}
+					onClose={closeFilter}
+					useNerdfonts={settings.ui.useNerdfonts}
+				/>
+			)}
+
+			{!isSearching && !isFiltering && (query || hasActiveFilters) && (
+				<Box marginBottom={1} gap={2}>
+					{query && <Text dimColor>Search: "{query}"</Text>}
+					{hasActiveFilters && (
+						<Text dimColor>Filters active (Esc to clear)</Text>
+					)}
+				</Box>
+			)}
+
+			{filteredTasks.length === 0 ? (
 				<Box flexDirection="column" alignItems="center" marginTop={2}>
-					<Text dimColor>No tasks yet</Text>
-					<Text dimColor>Press n to create your first task</Text>
+					{tasks.length === 0 ? (
+						<>
+							<Text dimColor>No tasks yet</Text>
+							<Text dimColor>Press n to create your first task</Text>
+						</>
+					) : (
+						<Text dimColor>No tasks match current filters</Text>
+					)}
 				</Box>
 			) : (
 				<Box flexDirection="column">
@@ -184,9 +258,9 @@ export function TableView({ boardId }: TableViewProps) {
 							columns={tableColumns}
 						/>
 					))}
-					{endIndex < tasks.length && (
+					{endIndex < filteredTasks.length && (
 						<Box paddingX={1}>
-							<Text dimColor>↓ {tasks.length - endIndex} more</Text>
+							<Text dimColor>↓ {filteredTasks.length - endIndex} more</Text>
 						</Box>
 					)}
 				</Box>
