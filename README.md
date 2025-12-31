@@ -1,87 +1,88 @@
 # Todosh
 
-A terminal-based Kanban task manager built with React and Ink.
+Todos for the rest of us. A fast, keyboard-driven Kanban task manager for the terminal. IPC Enabled.
 
-## Features
-
-- **Dashboard** - Manage multiple boards/projects
-- **Kanban Board** - Three-column layout (To Do, Doing, Done)
-- **Table View** - Alternative tabular task listing
-- **Detail View** - Jira-style two-column layout with comments
-- **Fuzzy Search** - Quick task filtering with `/`
-- **Archive** - Soft-delete for boards and tasks
-- **CLI** - Scriptable command-line interface
-- **IPC** - Unix socket server for external integrations
-
-## Installation
+## Quick Start
 
 ```bash
 bun install
-```
-
-## Usage
-
-### TUI
-
-```bash
-bun run start      # Run the TUI
-bun run dev        # Run with hot reload
-```
-
-### CLI
-
-```bash
-bun cli.ts help                    # Show all commands
-bun cli.ts boards                  # List boards
-bun cli.ts board:create "Work"     # Create board
-bun cli.ts add "Fix bug" -p high   # Add task
-bun cli.ts list -b 1               # List tasks
-bun cli.ts done 5                  # Mark done
-bun cli.ts archive 5               # Archive task
+bun run start
 ```
 
 ## Keybinds
 
-| Key | Action |
-|-----|--------|
-| `↑/↓` | Navigate |
-| `←/→` | Switch columns (Board) |
-| `Alt+←/→` | Move task between columns |
-| `Enter` | Select/Open |
-| `n` | New item |
-| `e` | Edit |
-| `d` | Delete |
-| `a` | Archive |
-| `m` | Move task (modal) |
-| `/` | Search |
-| `Tab` | Toggle Board/Table view |
-| `Esc` | Back / Clear filters |
-| `q` | Quit |
+| Key | Action | Key | Action |
+|-----|--------|-----|--------|
+| `↑` `↓` | Navigate | `n` | New |
+| `←` `→` | Switch column | `e` | Edit |
+| `Alt+←/→` | Move task | `d` | Delete |
+| `Enter` | Open | `a` | Archive |
+| `/` | Search | `Tab` | Toggle view |
+| `Esc` | Back | `q` | Quit |
 
-Vim mode available via settings (`h/j/k/l` navigation).
+Vim mode: `h/j/k/l` navigation (enable in settings).
 
-## Configuration
+## CLI
 
-Settings stored in `~/.config/todosh/settings.toml`:
+```bash
+bun cli.ts boards                  # List boards
+bun cli.ts board:create "Work"     # Create board
+bun cli.ts add "Fix bug" -p high   # Add task
+bun cli.ts done 5                  # Mark done
+```
+
+## IPC
+
+Todosh exposes a Unix socket for external integrations at `/tmp/todosh.sock`.
+
+Enable in config with `[ipc] enabled = true`, then send JSON messages:
+
+```bash
+echo '{"type":"ping"}' | nc -U /tmp/todosh.sock
+# {"ok":true,"data":{"pong":true,"pid":12345}}
+
+echo '{"type":"boards:list"}' | nc -U /tmp/todosh.sock
+# {"ok":true,"data":{"boards":[...]}}
+
+echo '{"type":"tasks:create","boardId":1,"title":"New task","priority":"high"}' | nc -U /tmp/todosh.sock
+# {"ok":true,"data":{"task":{...}}}
+```
+
+**Available commands:**
+
+| Command | Parameters |
+|---------|------------|
+| `ping` | — |
+| `boards:list` | — |
+| `boards:get` | `id` |
+| `boards:create` | `name`, `description?` |
+| `boards:update` | `id`, `name?`, `description?` |
+| `boards:delete` | `id` |
+| `tasks:list` | `boardId?`, `status?` |
+| `tasks:get` | `id` |
+| `tasks:create` | `boardId`, `title`, `description?`, `status?`, `priority?` |
+| `tasks:update` | `id`, `title?`, `description?`, `status?`, `priority?`, `dueDate?` |
+| `tasks:move` | `id`, `status` |
+| `tasks:delete` | `id` |
+
+## Config
+
+`~/.config/todosh/settings.toml`
 
 ```toml
 [ui]
 useNerdfonts = true
 
 [keybinds]
-mode = "default"  # or "vim"
+mode = "vim"  # or "default"
 
 [ipc]
 enabled = true
 ```
 
-## Tech Stack
+## Stack
 
-- **Bun** - Runtime & package manager
-- **React 19** - Component framework
-- **Ink 6** - Terminal UI renderer
-- **SQLite** - Data storage (via `bun:sqlite`)
-- **Biome** - Linting & formatting
+Bun + React 19 + Ink 6 + SQLite
 
 ## License
 
