@@ -1,3 +1,5 @@
+import { Banner } from "@components/banner";
+import { getTerminalSize } from "@hooks";
 import {
 	Box,
 	render,
@@ -8,26 +10,6 @@ import {
 	useStdout,
 } from "ink";
 import { useEffect, useMemo, useState } from "react";
-
-const banner = [
-	" __        __   _                            _          _____          _           _     ",
-	" \\ \\      / /__| | ___ ___  _ __ ___   ___  | |_ ___   |_   _|__   __| | ___  ___| |__  ",
-	"  \\ \\ /\\ / / _ \\ |/ __/ _ \\| '_ ` _ \\ / _ \\ | __/ _ \\    | |/ _ \\ / _` |/ _ \\/ __| '_ \\ ",
-	"   \\ V  V /  __/ | (_| (_) | | | | | |  __/ | || (_) |   | | (_) | (_| | (_) \\__ \\ | | |",
-	"    \\_/\\_/ \\___|_|\\___\\___/|_| |_| |_|\\___|  \\__\\___/    |_|\\___/ \\__,_|\\___/|___/_| |_|",
-];
-
-function getTerminalSize(stdout: NodeJS.WriteStream | null | undefined): {
-	columns: number;
-	rows: number;
-} {
-	const columns = typeof stdout?.columns === "number" ? stdout.columns : 80;
-	const rows = typeof stdout?.rows === "number" ? stdout.rows : 24;
-	return {
-		columns: Math.max(20, columns),
-		rows: Math.max(8, rows),
-	};
-}
 
 function App() {
 	const { exit } = useApp();
@@ -63,18 +45,16 @@ function App() {
 	const content = useMemo(
 		() =>
 			isScreenReaderEnabled ? (
-		<Box flexDirection="column" alignItems="center">
-			<Text>Welcome to Todosh</Text>
-			<Text dimColor>Press q or Esc to quit.</Text>
-		</Box>
-	) : (
-		<Box flexDirection="column" alignItems="center">
-			{banner.map((line) => (
-				<Text key={line}>{line}</Text>
-			))}
-			<Text dimColor>Press q or Esc to quit.</Text>
-		</Box>
-	),
+				<Box flexDirection="column" alignItems="center">
+					<Text>Welcome to Todosh</Text>
+					<Text dimColor>Press q or Esc to quit.</Text>
+				</Box>
+			) : (
+				<Box flexDirection="column" alignItems="center">
+					<Banner />
+					<Text dimColor>Press q or Esc to quit.</Text>
+				</Box>
+			),
 		[isScreenReaderEnabled],
 	);
 
