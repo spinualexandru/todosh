@@ -76,10 +76,7 @@ export function TableRow({
 	};
 
 	return (
-		<Box
-			paddingX={1}
-			backgroundColor={isSelected ? "blue" : undefined}
-		>
+		<Box paddingX={1} backgroundColor={isSelected ? "blue" : undefined}>
 			{columns.map((col, i) => (
 				<Box key={col.key} width={col.width}>
 					{renderCell(col.key, col.width)}
