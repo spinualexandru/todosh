@@ -1,9 +1,10 @@
 import { Confirm, Input, Modal } from "@components/common";
 import { Shell } from "@components/layout";
 import { useBoards, useKeymap, useRouter, useSettings } from "@hooks";
+import { stopSocketServer } from "@lib/ipc";
 import type { BoardWithStats } from "@types";
 import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import { Box, Text, useApp } from "ink";
 import { useEffect, useState } from "react";
 
 type ModalState =
@@ -25,6 +26,7 @@ const dashboardHints = [
 ];
 
 export function DashboardView() {
+	const { exit } = useApp();
 	const {
 		boards,
 		isLoading,
@@ -36,6 +38,11 @@ export function DashboardView() {
 	const { navigate } = useRouter();
 	const { settings } = useSettings();
 	const icons = settings.ui.useNerdfonts ? glyphs : fallbackGlyphs;
+
+	const handleExit = () => {
+		stopSocketServer();
+		exit();
+	};
 
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [modal, setModal] = useState<ModalState>({ type: "none" });
@@ -86,6 +93,7 @@ export function DashboardView() {
 					setModal({ type: "archive", board });
 				}
 			},
+			onBack: handleExit,
 		},
 	});
 

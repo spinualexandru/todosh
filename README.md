@@ -46,12 +46,13 @@ bun cli.ts archive 5               # Archive task
 |-----|--------|
 | `↑/↓` | Navigate |
 | `←/→` | Switch columns (Board) |
+| `Alt+←/→` | Move task between columns |
 | `Enter` | Select/Open |
 | `n` | New item |
 | `e` | Edit |
 | `d` | Delete |
 | `a` | Archive |
-| `m` | Move task |
+| `m` | Move task (modal) |
 | `/` | Search |
 | `Tab` | Toggle Board/Table view |
 | `Esc` | Back / Clear filters |

@@ -70,6 +70,8 @@ interface KeymapHandlers {
 	onDown?: () => void;
 	onLeft?: () => void;
 	onRight?: () => void;
+	onMoveLeft?: () => void;
+	onMoveRight?: () => void;
 	onSelect?: () => void;
 	onBack?: () => void;
 	onDelete?: () => void;
@@ -99,17 +101,21 @@ function normalizeKey(
 		escape: boolean;
 		backspace: boolean;
 		tab: boolean;
+		meta: boolean;
 	},
 ): string {
-	if (key.upArrow) return "upArrow";
-	if (key.downArrow) return "downArrow";
-	if (key.leftArrow) return "leftArrow";
-	if (key.rightArrow) return "rightArrow";
-	if (key.return) return "return";
+	// ESC should never have alt prefix (it's used standalone)
 	if (key.escape) return "escape";
-	if (key.backspace) return "backspace";
-	if (key.tab) return "tab";
-	return input;
+
+	const prefix = key.meta ? "alt+" : "";
+	if (key.upArrow) return `${prefix}upArrow`;
+	if (key.downArrow) return `${prefix}downArrow`;
+	if (key.leftArrow) return `${prefix}leftArrow`;
+	if (key.rightArrow) return `${prefix}rightArrow`;
+	if (key.return) return `${prefix}return`;
+	if (key.backspace) return `${prefix}backspace`;
+	if (key.tab) return `${prefix}tab`;
+	return `${prefix}${input}`;
 }
 
 export function useKeymap({ handlers, isActive = true }: UseKeymapOptions) {
@@ -131,6 +137,7 @@ export function useKeymap({ handlers, isActive = true }: UseKeymapOptions) {
 				escape: boolean;
 				backspace: boolean;
 				tab: boolean;
+				meta: boolean;
 			},
 		) => {
 			const normalizedKey = normalizeKey(input, key);
@@ -140,6 +147,8 @@ export function useKeymap({ handlers, isActive = true }: UseKeymapOptions) {
 				down: handlers.onDown,
 				left: handlers.onLeft,
 				right: handlers.onRight,
+				moveLeft: handlers.onMoveLeft,
+				moveRight: handlers.onMoveRight,
 				select: handlers.onSelect,
 				back: handlers.onBack,
 				delete: handlers.onDelete,
@@ -176,25 +185,29 @@ export function getKeybindHint(action: Action, mode: KeybindMode): string {
 	if (!keys || keys.length === 0) return "";
 
 	const displayKey = (k: string): string => {
-		switch (k) {
+		const hasAlt = k.startsWith("alt+");
+		const baseKey = hasAlt ? k.slice(4) : k;
+		const prefix = hasAlt ? "Alt+" : "";
+
+		switch (baseKey) {
 			case "upArrow":
-				return "↑";
+				return `${prefix}↑`;
 			case "downArrow":
-				return "↓";
+				return `${prefix}↓`;
 			case "leftArrow":
-				return "←";
+				return `${prefix}←`;
 			case "rightArrow":
-				return "→";
+				return `${prefix}→`;
 			case "return":
-				return "⏎";
+				return `${prefix}⏎`;
 			case "escape":
-				return "Esc";
+				return `${prefix}Esc`;
 			case "backspace":
-				return "⌫";
+				return `${prefix}⌫`;
 			case "tab":
-				return "Tab";
+				return `${prefix}Tab`;
 			default:
-				return k;
+				return `${prefix}${baseKey}`;
 		}
 	};
 

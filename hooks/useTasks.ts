@@ -200,6 +200,38 @@ export function useTasks(boardId: number) {
 		[db],
 	);
 
+	const setTaskTags = useCallback(
+		(taskId: number, tagNames: string[]): void => {
+			// Remove all existing tags
+			db.query(`DELETE FROM task_tags WHERE task_id = ?`).run(taskId);
+
+			// Add new tags
+			for (const name of tagNames) {
+				const trimmed = name.trim();
+				if (!trimmed) continue;
+
+				// Find or create tag
+				let tag = db
+					.query<Tag, [string]>(`SELECT * FROM tags WHERE name = ?`)
+					.get(trimmed);
+				if (!tag) {
+					tag = db
+						.query<Tag, [string, string]>(
+							`INSERT INTO tags (name, color) VALUES (?, ?) RETURNING *`,
+						)
+						.get(trimmed, "gray");
+				}
+				if (tag) {
+					db.query(
+						`INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?, ?)`,
+					).run(taskId, tag.id);
+				}
+			}
+			fetchTasks();
+		},
+		[db, fetchTasks],
+	);
+
 	const tasksByStatus = {
 		todo: tasks.filter((t) => t.status === "todo"),
 		doing: tasks.filter((t) => t.status === "doing"),
@@ -216,6 +248,7 @@ export function useTasks(boardId: number) {
 		deleteTask,
 		archiveTask,
 		getTask,
+		setTaskTags,
 		refresh: fetchTasks,
 	};
 }

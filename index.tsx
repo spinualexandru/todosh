@@ -17,7 +17,7 @@ if (settings?.ipc?.enabled) {
 
 function AppContent() {
 	const { exit } = useApp();
-	const { route, goBack, canGoBack } = useRouter();
+	const { route } = useRouter();
 	const { isLoading } = useSettings();
 
 	useKeymap({
@@ -25,14 +25,6 @@ function AppContent() {
 			onQuit: () => {
 				stopSocketServer();
 				exit();
-			},
-			onBack: () => {
-				if (canGoBack) {
-					goBack();
-				} else {
-					stopSocketServer();
-					exit();
-				}
 			},
 		},
 	});

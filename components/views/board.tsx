@@ -1,5 +1,11 @@
 import { Column } from "@components/board";
-import { Confirm, Input, Modal } from "@components/common";
+import {
+	Confirm,
+	EditTaskModal,
+	Input,
+	Modal,
+	type TaskUpdates,
+} from "@components/common";
 import { Shell } from "@components/layout";
 import { FilterMenu, SearchBar } from "@components/search";
 import {
@@ -31,14 +37,12 @@ type ModalState =
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 
 const boardHints = [
-	{ action: "left", label: "←" },
-	{ action: "right", label: "→" },
-	{ action: "up", label: "↑" },
-	{ action: "down", label: "↓" },
+	{ action: "up", label: "↑↓" },
+	{ action: "left", label: "←→" },
 	{ action: "select", label: "Open" },
 	{ action: "new", label: "New" },
 	{ action: "edit", label: "Edit" },
-	{ action: "move", label: "Move" },
+	{ action: "moveLeft", label: "Move" },
 	{ action: "archive", label: "Archive" },
 	{ action: "search", label: "Search" },
 	{ action: "toggleView", label: "Table" },
@@ -57,6 +61,7 @@ export function BoardView({ boardId }: BoardViewProps) {
 		deleteTask,
 		moveTask,
 		archiveTask,
+		setTaskTags,
 	} = useTasks(boardId);
 	const { navigate, goBack } = useRouter();
 	const { settings } = useSettings();
@@ -147,6 +152,24 @@ export function BoardView({ boardId }: BoardViewProps) {
 			onRight: () => {
 				setFocusedColumn((prev) => Math.min(statuses.length - 1, prev + 1));
 			},
+			onMoveLeft: () => {
+				if (selectedTask && focusedColumn > 0) {
+					const newStatus = statuses[focusedColumn - 1];
+					if (newStatus) {
+						moveTask(selectedTask.id, newStatus);
+						setFocusedColumn((prev) => prev - 1);
+					}
+				}
+			},
+			onMoveRight: () => {
+				if (selectedTask && focusedColumn < statuses.length - 1) {
+					const newStatus = statuses[focusedColumn + 1];
+					if (newStatus) {
+						moveTask(selectedTask.id, newStatus);
+						setFocusedColumn((prev) => prev + 1);
+					}
+				}
+			},
 			onSelect: () => {
 				if (selectedTask) {
 					navigate({
@@ -162,7 +185,6 @@ export function BoardView({ boardId }: BoardViewProps) {
 			},
 			onEdit: () => {
 				if (selectedTask) {
-					setInputValue(selectedTask.title);
 					setModal({ type: "edit", task: selectedTask });
 				}
 			},
@@ -207,12 +229,17 @@ export function BoardView({ boardId }: BoardViewProps) {
 		setInputValue("");
 	};
 
-	const handleEditSubmit = (title: string) => {
-		if (modal.type === "edit" && title.trim()) {
-			updateTask(modal.task.id, { title: title.trim() });
+	const handleEditSubmit = (updates: TaskUpdates) => {
+		if (modal.type === "edit") {
+			const { tags, ...taskUpdates } = updates;
+			if (Object.keys(taskUpdates).length > 0) {
+				updateTask(modal.task.id, taskUpdates);
+			}
+			if (tags) {
+				setTaskTags(modal.task.id, tags);
+			}
 		}
 		setModal({ type: "none" });
-		setInputValue("");
 	};
 
 	const handleDeleteConfirm = () => {
@@ -341,18 +368,11 @@ export function BoardView({ boardId }: BoardViewProps) {
 			)}
 
 			{modal.type === "edit" && (
-				<Modal title="Edit Task">
-					<Input
-						label="Title"
-						value={inputValue}
-						onChange={setInputValue}
-						onSubmit={handleEditSubmit}
-						onCancel={() => setModal({ type: "none" })}
-					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to save • Esc to cancel</Text>
-					</Box>
-				</Modal>
+				<EditTaskModal
+					task={modal.task}
+					onSave={handleEditSubmit}
+					onCancel={() => setModal({ type: "none" })}
+				/>
 			)}
 
 			{modal.type === "delete" && (
