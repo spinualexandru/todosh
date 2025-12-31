@@ -1,77 +1,54 @@
-import { Banner } from "@components/banner";
-import { getTerminalSize } from "@hooks";
-import {
-	Box,
-	render,
-	Text,
-	useApp,
-	useInput,
-	useIsScreenReaderEnabled,
-	useStdout,
-} from "ink";
-import { useEffect, useMemo, useState } from "react";
+import { AppProviders, DashboardView } from "@components";
+import { useKeymap, useRouter, useSettings } from "@hooks";
+import { render, Text, useApp } from "ink";
 
-function App() {
+function AppContent() {
 	const { exit } = useApp();
-	const { stdout } = useStdout();
-	const isScreenReaderEnabled = useIsScreenReaderEnabled();
-	const [{ columns, rows }, setTerminalSize] = useState(() =>
-		getTerminalSize(stdout),
-	);
+	const { route, goBack, canGoBack } = useRouter();
+	const { isLoading } = useSettings();
 
-	useEffect(() => {
-		setTerminalSize(getTerminalSize(stdout));
-		const handleResize = () => setTerminalSize(getTerminalSize(stdout));
-		stdout?.on?.("resize", handleResize);
-		return () => {
-			stdout?.off?.("resize", handleResize);
-		};
-	}, [stdout]);
-
-	useEffect(() => {
-		// Clear screen + go home; hide cursor for a TUI feel.
-		stdout?.write("\x1b[2J\x1b[H\x1b[?25l");
-		return () => {
-			stdout?.write("\x1b[?25h");
-		};
-	}, [stdout]);
-
-	useInput((input, key) => {
-		if (key.escape || input.toLowerCase() === "q") {
-			exit();
-		}
+	useKeymap({
+		handlers: {
+			onQuit: () => exit(),
+			onBack: () => {
+				if (canGoBack) {
+					goBack();
+				} else {
+					exit();
+				}
+			},
+		},
 	});
 
-	const content = useMemo(
-		() =>
-			isScreenReaderEnabled ? (
-				<Box flexDirection="column" alignItems="center">
-					<Text>Welcome to Todosh</Text>
-					<Text dimColor>Press q or Esc to quit.</Text>
-				</Box>
-			) : (
-				<Box flexDirection="column" alignItems="center">
-					<Banner />
-					<Text dimColor>Press q or Esc to quit.</Text>
-				</Box>
-			),
-		[isScreenReaderEnabled],
-	);
+	if (isLoading) {
+		return <Text>Loading...</Text>;
+	}
 
+	switch (route.view) {
+		case "dashboard":
+			return <DashboardView />;
+		case "board":
+			return (
+				<Text>Board view coming in Phase 3 (boardId: {route.boardId})</Text>
+			);
+		case "table":
+			return (
+				<Text>Table view coming in Phase 4 (boardId: {route.boardId})</Text>
+			);
+		case "detail":
+			return (
+				<Text>Detail view coming in Phase 5 (taskId: {route.taskId})</Text>
+			);
+		default:
+			return <DashboardView />;
+	}
+}
+
+function App() {
 	return (
-		<Box
-			width={columns}
-			height={rows}
-			borderStyle="round"
-			borderColor="cyan"
-			paddingX={2}
-			paddingY={1}
-			justifyContent="center"
-			alignItems="center"
-			aria-label="Welcome to Todosh"
-		>
-			{content}
-		</Box>
+		<AppProviders>
+			<AppContent />
+		</AppProviders>
 	);
 }
 

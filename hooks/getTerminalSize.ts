@@ -1,4 +1,6 @@
-export function getTerminalSize(stdout: NodeJS.WriteStream | null | undefined): {
+export function getTerminalSize(
+	stdout: NodeJS.WriteStream | null | undefined,
+): {
 	columns: number;
 	rows: number;
 } {

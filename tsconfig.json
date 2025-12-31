@@ -1,37 +1,44 @@
 {
-  "compilerOptions": {
-    // Environment setup & latest features
-    "lib": ["ESNext"],
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "baseUrl": "./",
-    "jsx": "react-jsx",
-    "allowJs": true,
+	"compilerOptions": {
+		// Environment setup & latest features
+		"lib": ["ESNext"],
+		"target": "ESNext",
+		"module": "Preserve",
+		"moduleDetection": "force",
+		"baseUrl": "./",
+		"jsx": "react-jsx",
+		"allowJs": true,
 
-    // Bundler mode
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
+		// Bundler mode
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"noEmit": true,
 
-    // Best practices
-    "strict": true,
-    "skipLibCheck": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
+		// Best practices
+		"strict": true,
+		"skipLibCheck": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
 
-    // Some stricter flags (disabled by default)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-    "paths": {
-      "@hooks/*": ["hooks/*"],
-      "@hooks": ["hooks/index.ts"],
-      "@components/*": ["components/*"],
-      "@utils/*": ["utils/*"],
-      "@lib/*": ["lib/*"]
-    }
-  }
+		// Some stricter flags (disabled by default)
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noPropertyAccessFromIndexSignature": false,
+		"paths": {
+			"@hooks/*": ["hooks/*"],
+			"@hooks": ["hooks/index.ts"],
+			"@components/*": ["components/*"],
+			"@components": ["components/index.ts"],
+			"@utils/*": ["utils/*"],
+			"@utils": ["utils/index.ts"],
+			"@lib/*": ["lib/*"],
+			"@lib": ["lib/index.ts"],
+			"@types": ["types/index.ts"],
+			"@types/*": ["types/*"],
+			"@contexts/*": ["contexts/*"],
+			"@contexts": ["contexts/index.ts"]
+		}
+	}
 }
