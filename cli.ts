@@ -31,6 +31,8 @@ Commands:
   todo <id>                   Mark task as todo
   move <id> <status>          Move task to status
   delete <id>                 Delete a task
+  archive <id>                Archive a task
+  board:archive <id>          Archive a board
 
   help                        Show this help
 
@@ -298,6 +300,46 @@ async function main(): Promise<void> {
 			}
 			db.query("DELETE FROM tasks WHERE id = ?").run(id);
 			console.log(`Deleted task "${task.title}"`);
+			break;
+		}
+
+		case "archive": {
+			const id = Number.parseInt(args[1] ?? "", 10);
+			if (Number.isNaN(id)) {
+				console.error("Error: Valid task ID required");
+				process.exit(1);
+			}
+			const task = db
+				.query<Task, [number]>("SELECT * FROM tasks WHERE id = ?")
+				.get(id);
+			if (!task) {
+				console.error(`Error: Task not found: ${id}`);
+				process.exit(1);
+			}
+			db.query(
+				"UPDATE tasks SET archived = 1, updated_at = datetime('now') WHERE id = ?",
+			).run(id);
+			console.log(`Archived task "${task.title}"`);
+			break;
+		}
+
+		case "board:archive": {
+			const id = Number.parseInt(args[1] ?? "", 10);
+			if (Number.isNaN(id)) {
+				console.error("Error: Valid board ID required");
+				process.exit(1);
+			}
+			const board = db
+				.query<Board, [number]>("SELECT * FROM boards WHERE id = ?")
+				.get(id);
+			if (!board) {
+				console.error(`Error: Board not found: ${id}`);
+				process.exit(1);
+			}
+			db.query(
+				"UPDATE boards SET archived = 1, updated_at = datetime('now') WHERE id = ?",
+			).run(id);
+			console.log(`Archived board "${board.name}"`);
 			break;
 		}
 

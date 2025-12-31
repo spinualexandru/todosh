@@ -4,13 +4,19 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Footer } from "./footer";
 import { Header } from "./header";
 
+interface KeyHint {
+	action: string;
+	label: string;
+}
+
 interface ShellProps {
 	children: ReactNode;
 	title: string;
 	breadcrumbs?: string[];
+	hints?: KeyHint[];
 }
 
-export function Shell({ children, title, breadcrumbs = [] }: ShellProps) {
+export function Shell({ children, title, breadcrumbs = [], hints }: ShellProps) {
 	const { stdout } = useStdout();
 	const [{ columns, rows }, setTerminalSize] = useState(() =>
 		getTerminalSize(stdout),
@@ -51,7 +57,7 @@ export function Shell({ children, title, breadcrumbs = [] }: ShellProps) {
 			>
 				{children}
 			</Box>
-			<Footer />
+			<Footer hints={hints} />
 		</Box>
 	);
 }

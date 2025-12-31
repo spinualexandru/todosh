@@ -14,7 +14,7 @@ import {
 import { useTasks } from "@hooks/useTasks";
 import type { TaskStatus, TaskWithTags } from "@types";
 import { Box, Text, useStdout } from "ink";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface BoardViewProps {
 	boardId: number;
@@ -25,7 +25,8 @@ type ModalState =
 	| { type: "create" }
 	| { type: "edit"; task: TaskWithTags }
 	| { type: "delete"; task: TaskWithTags }
-	| { type: "move"; task: TaskWithTags };
+	| { type: "move"; task: TaskWithTags }
+	| { type: "archive"; task: TaskWithTags };
 
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 
@@ -33,8 +34,15 @@ export function BoardView({ boardId }: BoardViewProps) {
 	const { stdout } = useStdout();
 	const { rows } = getTerminalSize(stdout);
 	const { getBoard } = useBoards();
-	const { tasks, isLoading, createTask, updateTask, deleteTask, moveTask } =
-		useTasks(boardId);
+	const {
+		tasks,
+		isLoading,
+		createTask,
+		updateTask,
+		deleteTask,
+		moveTask,
+		archiveTask,
+	} = useTasks(boardId);
 	const { navigate, goBack } = useRouter();
 	const { settings } = useSettings();
 
@@ -81,6 +89,18 @@ export function BoardView({ boardId }: BoardViewProps) {
 		[filteredTasks],
 	);
 
+	useEffect(() => {
+		setSelectedIndices((prev) => ({
+			todo: Math.min(prev.todo, Math.max(0, tasksByStatus.todo.length - 1)),
+			doing: Math.min(prev.doing, Math.max(0, tasksByStatus.doing.length - 1)),
+			done: Math.min(prev.done, Math.max(0, tasksByStatus.done.length - 1)),
+		}));
+	}, [
+		tasksByStatus.todo.length,
+		tasksByStatus.doing.length,
+		tasksByStatus.done.length,
+	]);
+
 	const isModalOpen = modal.type !== "none";
 	const isInputActive = isSearching || isFiltering || isModalOpen;
 	const currentStatus = statuses[focusedColumn] ?? "todo";
@@ -101,7 +121,7 @@ export function BoardView({ boardId }: BoardViewProps) {
 				setSelectedIndices((prev) => ({
 					...prev,
 					[currentStatus]: Math.min(
-						currentTasks.length - 1,
+						Math.max(0, currentTasks.length - 1),
 						prev[currentStatus] + 1,
 					),
 				}));
@@ -139,6 +159,11 @@ export function BoardView({ boardId }: BoardViewProps) {
 			onMove: () => {
 				if (selectedTask) {
 					setModal({ type: "move", task: selectedTask });
+				}
+			},
+			onArchive: () => {
+				if (selectedTask) {
+					setModal({ type: "archive", task: selectedTask });
 				}
 			},
 			onSearch: openSearch,
@@ -189,6 +214,17 @@ export function BoardView({ boardId }: BoardViewProps) {
 	const handleMoveToStatus = (newStatus: TaskStatus) => {
 		if (modal.type === "move") {
 			moveTask(modal.task.id, newStatus);
+		}
+		setModal({ type: "none" });
+	};
+
+	const handleArchiveConfirm = () => {
+		if (modal.type === "archive") {
+			archiveTask(modal.task.id);
+			setSelectedIndices((prev) => ({
+				...prev,
+				[modal.task.status]: Math.max(0, prev[modal.task.status] - 1),
+			}));
 		}
 		setModal({ type: "none" });
 	};
@@ -308,6 +344,16 @@ export function BoardView({ boardId }: BoardViewProps) {
 					task={modal.task}
 					onMove={handleMoveToStatus}
 					onCancel={() => setModal({ type: "none" })}
+				/>
+			)}
+
+			{modal.type === "archive" && (
+				<Confirm
+					title="Archive Task"
+					message={`Archive "${modal.task.title}"?`}
+					onConfirm={handleArchiveConfirm}
+					onCancel={() => setModal({ type: "none" })}
+					confirmLabel="Archive"
 				/>
 			)}
 		</Shell>

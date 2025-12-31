@@ -14,7 +14,7 @@ import {
 import { useTasks } from "@hooks/useTasks";
 import type { TaskStatus, TaskWithTags } from "@types";
 import { Box, Text, useStdout } from "ink";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface TableViewProps {
 	boardId: number;
@@ -25,7 +25,8 @@ type ModalState =
 	| { type: "create" }
 	| { type: "edit"; task: TaskWithTags }
 	| { type: "delete"; task: TaskWithTags }
-	| { type: "move"; task: TaskWithTags };
+	| { type: "move"; task: TaskWithTags }
+	| { type: "archive"; task: TaskWithTags };
 
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 
@@ -33,8 +34,15 @@ export function TableView({ boardId }: TableViewProps) {
 	const { stdout } = useStdout();
 	const { columns: termCols, rows } = getTerminalSize(stdout);
 	const { getBoard } = useBoards();
-	const { tasks, isLoading, createTask, updateTask, deleteTask, moveTask } =
-		useTasks(boardId);
+	const {
+		tasks,
+		isLoading,
+		createTask,
+		updateTask,
+		deleteTask,
+		moveTask,
+		archiveTask,
+	} = useTasks(boardId);
 	const { navigate, goBack } = useRouter();
 	const { settings } = useSettings();
 
@@ -65,6 +73,12 @@ export function TableView({ boardId }: TableViewProps) {
 	const [modal, setModal] = useState<ModalState>({ type: "none" });
 	const [inputValue, setInputValue] = useState("");
 
+	useEffect(() => {
+		if (selectedIndex >= filteredTasks.length && filteredTasks.length > 0) {
+			setSelectedIndex(filteredTasks.length - 1);
+		}
+	}, [filteredTasks.length, selectedIndex]);
+
 	const isModalOpen = modal.type !== "none";
 	const isInputActive = isSearching || isFiltering || isModalOpen;
 	const selectedTask = filteredTasks[selectedIndex];
@@ -85,7 +99,9 @@ export function TableView({ boardId }: TableViewProps) {
 		handlers: {
 			onUp: () => setSelectedIndex((i) => Math.max(0, i - 1)),
 			onDown: () =>
-				setSelectedIndex((i) => Math.min(filteredTasks.length - 1, i + 1)),
+				setSelectedIndex((i) =>
+					Math.min(Math.max(0, filteredTasks.length - 1), i + 1),
+				),
 			onSelect: () => {
 				if (selectedTask) {
 					navigate({
@@ -113,6 +129,11 @@ export function TableView({ boardId }: TableViewProps) {
 			onMove: () => {
 				if (selectedTask) {
 					setModal({ type: "move", task: selectedTask });
+				}
+			},
+			onArchive: () => {
+				if (selectedTask) {
+					setModal({ type: "archive", task: selectedTask });
 				}
 			},
 			onSearch: openSearch,
@@ -158,6 +179,14 @@ export function TableView({ boardId }: TableViewProps) {
 	const handleMoveToStatus = (newStatus: TaskStatus) => {
 		if (modal.type === "move") {
 			moveTask(modal.task.id, newStatus);
+		}
+		setModal({ type: "none" });
+	};
+
+	const handleArchiveConfirm = () => {
+		if (modal.type === "archive") {
+			archiveTask(modal.task.id);
+			setSelectedIndex((i) => Math.max(0, i - 1));
 		}
 		setModal({ type: "none" });
 	};
@@ -313,6 +342,16 @@ export function TableView({ boardId }: TableViewProps) {
 					task={modal.task}
 					onMove={handleMoveToStatus}
 					onCancel={() => setModal({ type: "none" })}
+				/>
+			)}
+
+			{modal.type === "archive" && (
+				<Confirm
+					title="Archive Task"
+					message={`Archive "${modal.task.title}"?`}
+					onConfirm={handleArchiveConfirm}
+					onCancel={() => setModal({ type: "none" })}
+					confirmLabel="Archive"
 				/>
 			)}
 		</Shell>

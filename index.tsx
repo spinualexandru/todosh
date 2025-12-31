@@ -11,7 +11,7 @@ import { loadSettings } from "@lib/settings";
 import { render, Text, useApp } from "ink";
 
 const settings = loadSettings();
-if (settings.ipc.enabled) {
+if (settings?.ipc?.enabled) {
 	startSocketServer();
 }
 

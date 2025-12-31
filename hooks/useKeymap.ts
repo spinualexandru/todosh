@@ -11,6 +11,7 @@ type Action =
 	| "select"
 	| "back"
 	| "delete"
+	| "archive"
 	| "search"
 	| "help"
 	| "new"
@@ -30,6 +31,7 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		select: ["return"],
 		back: ["escape", "backspace"],
 		delete: ["d"],
+		archive: ["a"],
 		search: ["/"],
 		help: ["?"],
 		new: ["n"],
@@ -46,6 +48,7 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		select: ["return"],
 		back: ["escape"],
 		delete: ["d", "x"],
+		archive: ["a"],
 		search: ["/"],
 		help: ["?"],
 		new: ["n", "o"],
@@ -64,6 +67,7 @@ interface KeymapHandlers {
 	onSelect?: () => void;
 	onBack?: () => void;
 	onDelete?: () => void;
+	onArchive?: () => void;
 	onSearch?: () => void;
 	onHelp?: () => void;
 	onNew?: () => void;
@@ -133,6 +137,7 @@ export function useKeymap({ handlers, isActive = true }: UseKeymapOptions) {
 				select: handlers.onSelect,
 				back: handlers.onBack,
 				delete: handlers.onDelete,
+				archive: handlers.onArchive,
 				search: handlers.onSearch,
 				help: handlers.onHelp,
 				new: handlers.onNew,

@@ -4,17 +4,35 @@ import { useBoards, useKeymap, useRouter, useSettings } from "@hooks";
 import type { BoardWithStats } from "@types";
 import { fallbackGlyphs, glyphs } from "@utils";
 import { Box, Text } from "ink";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ModalState =
 	| { type: "none" }
 	| { type: "create" }
 	| { type: "edit"; board: BoardWithStats }
-	| { type: "delete"; board: BoardWithStats };
+	| { type: "delete"; board: BoardWithStats }
+	| { type: "archive"; board: BoardWithStats };
+
+const dashboardHints = [
+	{ action: "up", label: "Up" },
+	{ action: "down", label: "Down" },
+	{ action: "select", label: "Open" },
+	{ action: "new", label: "New" },
+	{ action: "edit", label: "Edit" },
+	{ action: "delete", label: "Delete" },
+	{ action: "archive", label: "Archive" },
+	{ action: "quit", label: "Quit" },
+];
 
 export function DashboardView() {
-	const { boards, isLoading, createBoard, updateBoard, deleteBoard } =
-		useBoards();
+	const {
+		boards,
+		isLoading,
+		createBoard,
+		updateBoard,
+		deleteBoard,
+		archiveBoard,
+	} = useBoards();
 	const { navigate } = useRouter();
 	const { settings } = useSettings();
 	const icons = settings.ui.useNerdfonts ? glyphs : fallbackGlyphs;
@@ -23,13 +41,22 @@ export function DashboardView() {
 	const [modal, setModal] = useState<ModalState>({ type: "none" });
 	const [inputValue, setInputValue] = useState("");
 
+	useEffect(() => {
+		if (selectedIndex >= boards.length && boards.length > 0) {
+			setSelectedIndex(boards.length - 1);
+		}
+	}, [boards.length, selectedIndex]);
+
 	const isModalOpen = modal.type !== "none";
 
 	useKeymap({
 		isActive: !isModalOpen,
 		handlers: {
 			onUp: () => setSelectedIndex((i) => Math.max(0, i - 1)),
-			onDown: () => setSelectedIndex((i) => Math.min(boards.length - 1, i + 1)),
+			onDown: () =>
+				setSelectedIndex((i) =>
+					Math.min(Math.max(0, boards.length - 1), i + 1),
+				),
 			onSelect: () => {
 				const board = boards[selectedIndex];
 				if (board) {
@@ -51,6 +78,12 @@ export function DashboardView() {
 				const board = boards[selectedIndex];
 				if (board) {
 					setModal({ type: "delete", board });
+				}
+			},
+			onArchive: () => {
+				const board = boards[selectedIndex];
+				if (board) {
+					setModal({ type: "archive", board });
 				}
 			},
 		},
@@ -80,16 +113,24 @@ export function DashboardView() {
 		setModal({ type: "none" });
 	};
 
+	const handleArchiveConfirm = () => {
+		if (modal.type === "archive") {
+			archiveBoard(modal.board.id);
+			setSelectedIndex((i) => Math.max(0, i - 1));
+		}
+		setModal({ type: "none" });
+	};
+
 	if (isLoading) {
 		return (
-			<Shell title="Dashboard" breadcrumbs={["Boards"]}>
+			<Shell title="Dashboard" breadcrumbs={["Boards"]} hints={dashboardHints}>
 				<Text>Loading boards...</Text>
 			</Shell>
 		);
 	}
 
 	return (
-		<Shell title="Dashboard" breadcrumbs={["Boards"]}>
+		<Shell title="Dashboard" breadcrumbs={["Boards"]} hints={dashboardHints}>
 			{boards.length === 0 ? (
 				<Box flexDirection="column" alignItems="center" marginTop={2}>
 					<Text color="gray">{icons.board} No boards yet</Text>
@@ -147,6 +188,16 @@ export function DashboardView() {
 					onCancel={() => setModal({ type: "none" })}
 					confirmLabel="Delete"
 					dangerous
+				/>
+			)}
+
+			{modal.type === "archive" && (
+				<Confirm
+					title="Archive Board"
+					message={`Archive "${modal.board.name}"? It can be restored later.`}
+					onConfirm={handleArchiveConfirm}
+					onCancel={() => setModal({ type: "none" })}
+					confirmLabel="Archive"
 				/>
 			)}
 		</Shell>
