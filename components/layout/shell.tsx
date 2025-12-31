@@ -16,7 +16,12 @@ interface ShellProps {
 	hints?: KeyHint[];
 }
 
-export function Shell({ children, title, breadcrumbs = [], hints }: ShellProps) {
+export function Shell({
+	children,
+	title,
+	breadcrumbs = [],
+	hints,
+}: ShellProps) {
 	const { stdout } = useStdout();
 	const [{ columns, rows }, setTerminalSize] = useState(() =>
 		getTerminalSize(stdout),

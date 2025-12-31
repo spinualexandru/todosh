@@ -10,7 +10,7 @@ import { startSocketServer, stopSocketServer } from "@lib/ipc";
 import { loadSettings } from "@lib/settings";
 import { render, Text, useApp } from "ink";
 
-const settings = loadSettings();
+const settings = await loadSettings();
 if (settings?.ipc?.enabled) {
 	startSocketServer();
 }

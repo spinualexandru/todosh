@@ -31,6 +31,14 @@ type ModalState =
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
 
+const detailHints = [
+	{ action: "left", label: "←" },
+	{ action: "right", label: "→" },
+	{ action: "edit", label: "Edit" },
+	{ action: "new", label: "Comment" },
+	{ action: "back", label: "Back" },
+];
+
 export function DetailView({ boardId, taskId }: DetailViewProps) {
 	const { stdout } = useStdout();
 	const { columns, rows } = getTerminalSize(stdout);
@@ -125,7 +133,11 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 
 	if (!board || !task) {
 		return (
-			<Shell title="Not found" breadcrumbs={["Boards", "???", "???"]}>
+			<Shell
+				title="Not found"
+				breadcrumbs={["Boards", "???", "???"]}
+				hints={detailHints}
+			>
 				<Text color="red">Task not found</Text>
 			</Shell>
 		);
@@ -138,7 +150,11 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 	const commentHeight = contentHeight - descHeight - 1;
 
 	return (
-		<Shell title={task.title} breadcrumbs={["Boards", board.name, task.title]}>
+		<Shell
+			title={task.title}
+			breadcrumbs={["Boards", board.name, task.title]}
+			hints={detailHints}
+		>
 			<Box gap={1}>
 				<Box flexDirection="column" width={leftWidth}>
 					<Description

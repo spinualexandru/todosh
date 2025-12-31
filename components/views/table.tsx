@@ -30,6 +30,19 @@ type ModalState =
 
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 
+const tableHints = [
+	{ action: "up", label: "↑" },
+	{ action: "down", label: "↓" },
+	{ action: "select", label: "Open" },
+	{ action: "new", label: "New" },
+	{ action: "edit", label: "Edit" },
+	{ action: "move", label: "Move" },
+	{ action: "archive", label: "Archive" },
+	{ action: "search", label: "Search" },
+	{ action: "toggleView", label: "Board" },
+	{ action: "back", label: "Back" },
+];
+
 export function TableView({ boardId }: TableViewProps) {
 	const { stdout } = useStdout();
 	const { columns: termCols, rows } = getTerminalSize(stdout);
@@ -193,7 +206,11 @@ export function TableView({ boardId }: TableViewProps) {
 
 	if (!board) {
 		return (
-			<Shell title="Board not found" breadcrumbs={["Boards", "???"]}>
+			<Shell
+				title="Board not found"
+				breadcrumbs={["Boards", "???"]}
+				hints={tableHints}
+			>
 				<Text color="red">Board not found</Text>
 			</Shell>
 		);
@@ -201,7 +218,11 @@ export function TableView({ boardId }: TableViewProps) {
 
 	if (isLoading) {
 		return (
-			<Shell title={board.name} breadcrumbs={["Boards", board.name, "Table"]}>
+			<Shell
+				title={board.name}
+				breadcrumbs={["Boards", board.name, "Table"]}
+				hints={tableHints}
+			>
 				<Text>Loading tasks...</Text>
 			</Shell>
 		);
@@ -225,6 +246,7 @@ export function TableView({ boardId }: TableViewProps) {
 		<Shell
 			title={`${board.name} (Table)`}
 			breadcrumbs={["Boards", board.name, "Table"]}
+			hints={tableHints}
 		>
 			{isSearching && (
 				<SearchBar

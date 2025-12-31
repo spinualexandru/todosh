@@ -8,6 +8,8 @@ type Action =
 	| "down"
 	| "left"
 	| "right"
+	| "moveLeft"
+	| "moveRight"
 	| "select"
 	| "back"
 	| "delete"
@@ -28,6 +30,8 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		down: ["downArrow"],
 		left: ["leftArrow"],
 		right: ["rightArrow"],
+		moveLeft: ["alt+leftArrow"],
+		moveRight: ["alt+rightArrow"],
 		select: ["return"],
 		back: ["escape", "backspace"],
 		delete: ["d"],
@@ -45,6 +49,8 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		down: ["downArrow", "j"],
 		left: ["leftArrow", "h"],
 		right: ["rightArrow", "l"],
+		moveLeft: ["alt+leftArrow", "alt+h"],
+		moveRight: ["alt+rightArrow", "alt+l"],
 		select: ["return"],
 		back: ["escape"],
 		delete: ["d", "x"],

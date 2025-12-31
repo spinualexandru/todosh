@@ -30,6 +30,21 @@ type ModalState =
 
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 
+const boardHints = [
+	{ action: "left", label: "←" },
+	{ action: "right", label: "→" },
+	{ action: "up", label: "↑" },
+	{ action: "down", label: "↓" },
+	{ action: "select", label: "Open" },
+	{ action: "new", label: "New" },
+	{ action: "edit", label: "Edit" },
+	{ action: "move", label: "Move" },
+	{ action: "archive", label: "Archive" },
+	{ action: "search", label: "Search" },
+	{ action: "toggleView", label: "Table" },
+	{ action: "back", label: "Back" },
+];
+
 export function BoardView({ boardId }: BoardViewProps) {
 	const { stdout } = useStdout();
 	const { rows } = getTerminalSize(stdout);
@@ -231,7 +246,11 @@ export function BoardView({ boardId }: BoardViewProps) {
 
 	if (!board) {
 		return (
-			<Shell title="Board not found" breadcrumbs={["Boards", "???"]}>
+			<Shell
+				title="Board not found"
+				breadcrumbs={["Boards", "???"]}
+				hints={boardHints}
+			>
 				<Text color="red">Board not found</Text>
 			</Shell>
 		);
@@ -239,7 +258,11 @@ export function BoardView({ boardId }: BoardViewProps) {
 
 	if (isLoading) {
 		return (
-			<Shell title={board.name} breadcrumbs={["Boards", board.name]}>
+			<Shell
+				title={board.name}
+				breadcrumbs={["Boards", board.name]}
+				hints={boardHints}
+			>
 				<Text>Loading tasks...</Text>
 			</Shell>
 		);
@@ -251,7 +274,11 @@ export function BoardView({ boardId }: BoardViewProps) {
 	const columnWidth = Math.floor((80 - 6) / 3);
 
 	return (
-		<Shell title={board.name} breadcrumbs={["Boards", board.name]}>
+		<Shell
+			title={board.name}
+			breadcrumbs={["Boards", board.name]}
+			hints={boardHints}
+		>
 			{isSearching && (
 				<SearchBar
 					value={query}
