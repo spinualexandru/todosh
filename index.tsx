@@ -1,4 +1,4 @@
-import { AppProviders, DashboardView } from "@components";
+import { AppProviders, BoardView, DashboardView } from "@components";
 import { useKeymap, useRouter, useSettings } from "@hooks";
 import { render, Text, useApp } from "ink";
 
@@ -28,9 +28,7 @@ function AppContent() {
 		case "dashboard":
 			return <DashboardView />;
 		case "board":
-			return (
-				<Text>Board view coming in Phase 3 (boardId: {route.boardId})</Text>
-			);
+			return <BoardView boardId={route.boardId} />;
 		case "table":
 			return (
 				<Text>Table view coming in Phase 4 (boardId: {route.boardId})</Text>
