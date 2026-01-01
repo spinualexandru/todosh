@@ -28,13 +28,13 @@ export function TableHeader({ useNerdfonts, columns }: TableHeaderProps) {
 		>
 			{columns.map((col, i) => (
 				<Box key={col.key} width={col.width}>
-					<Text bold color="cyan">
-						{col.label}
-					</Text>
+					<Box flexGrow={1}>
+						<Text bold color="cyan">
+							{col.label}
+						</Text>
+					</Box>
 					{i < columns.length - 1 && (
-						<Box marginLeft={1}>
-							<Text dimColor>{icons.border.vertical}</Text>
-						</Box>
+						<Text dimColor>{icons.border.vertical}</Text>
 					)}
 				</Box>
 			))}

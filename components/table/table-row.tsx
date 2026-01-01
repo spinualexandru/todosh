@@ -39,30 +39,44 @@ export function TableRow({
 					task.title.length > maxLen
 						? `${task.title.slice(0, maxLen - 1)}…`
 						: task.title;
-				return <Text>{title}</Text>;
+				return <Text color={isSelected ? "black" : undefined}>{title}</Text>;
 			}
 			case "status":
 				return (
-					<Text color={statusColors[task.status] as never}>
+					<Text
+						color={isSelected ? "black" : (statusColors[task.status] as never)}
+					>
 						{icons.column[task.status]} {task.status.toUpperCase()}
 					</Text>
 				);
 			case "priority":
 				return (
-					<Text color={priorityColors[task.priority] as never}>
+					<Text
+						color={
+							isSelected ? "black" : (priorityColors[task.priority] as never)
+						}
+					>
 						{icons.priority[task.priority]} {task.priority}
 					</Text>
 				);
 			case "due_date":
 				return (
-					<Text dimColor={!task.due_date}>
+					<Text
+						dimColor={!task.due_date}
+						color={isSelected ? "black" : undefined}
+					>
 						{task.due_date ? formatDate(task.due_date) : "-"}
 					</Text>
 				);
 			case "tags":
-				if (task.tags.length === 0) return <Text dimColor>-</Text>;
+				if (task.tags.length === 0)
+					return (
+						<Text dimColor color={isSelected ? "black" : undefined}>
+							-
+						</Text>
+					);
 				return (
-					<Text>
+					<Text color={isSelected ? "black" : undefined}>
 						{task.tags
 							.slice(0, 2)
 							.map((t) => t.name)
@@ -79,11 +93,11 @@ export function TableRow({
 		<Box paddingX={1} backgroundColor={isSelected ? "blue" : undefined}>
 			{columns.map((col, i) => (
 				<Box key={col.key} width={col.width}>
-					{renderCell(col.key, col.width)}
+					<Box flexGrow={1}>{renderCell(col.key, col.width)}</Box>
 					{i < columns.length - 1 && (
-						<Box marginLeft={1}>
-							<Text dimColor>{icons.border.vertical}</Text>
-						</Box>
+						<Text dimColor color={isSelected ? "red" : undefined}>
+							{icons.border.vertical}
+						</Text>
 					)}
 				</Box>
 			))}
