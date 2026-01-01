@@ -1,6 +1,36 @@
 {
 	"name": "todosh",
-	"module": "index.tsx",
+	"version": "1.0.0",
+	"description": "A fast, keyboard-driven Kanban task manager for the terminal",
+	"author": "Alexandru Spinu",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/alexspinu/todosh"
+	},
+	"keywords": [
+		"todo",
+		"kanban",
+		"cli",
+		"tui",
+		"terminal",
+		"task-manager"
+	],
+	"type": "module",
+	"bin": {
+		"todosh": "./bin/todosh.ts"
+	},
+	"scripts": {
+		"check": "biome check",
+		"dev": "bun run index.tsx --watch",
+		"format": "biome format",
+		"lint": "biome lint",
+		"start": "bun run index.tsx"
+	},
+	"dependencies": {
+		"ink": "^6.6.0",
+		"react": "^19.2.3"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.10",
 		"@types/bun": "latest",
@@ -9,18 +39,5 @@
 	},
 	"peerDependencies": {
 		"typescript": "^5"
-	},
-	"private": true,
-	"scripts": {
-		"check": "biome check",
-		"dev": "bun run index.tsx --watch",
-		"format": "biome format",
-		"lint": "biome lint",
-		"start": "bun run index.tsx"
-	},
-	"type": "module",
-	"dependencies": {
-		"ink": "^6.6.0",
-		"react": "^19.2.3"
 	}
 }

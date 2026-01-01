@@ -1,6 +1,18 @@
 #!/usr/bin/env bun
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { getDatabase } from "@lib/db/connection";
 import type { Board, Task } from "@types";
+
+function detectShell(): string | null {
+	const shell = process.env.SHELL;
+	if (!shell) return null;
+	const name = shell.split("/").pop();
+	if (name === "fish" || name === "bash" || name === "zsh") {
+		return name;
+	}
+	return null;
+}
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -34,6 +46,7 @@ Commands:
   archive <id>                Archive a task
   board:archive <id>          Archive a board
 
+  completions                 Install shell completions
   help                        Show this help
 
 Examples:
@@ -340,6 +353,65 @@ async function main(): Promise<void> {
 				"UPDATE boards SET archived = 1, updated_at = datetime('now') WHERE id = ?",
 			).run(id);
 			console.log(`Archived board "${board.name}"`);
+			break;
+		}
+
+		case "completions": {
+			const shell = detectShell();
+			if (!shell) {
+				console.error(
+					"Error: Could not detect shell. Set $SHELL environment variable.",
+				);
+				process.exit(1);
+			}
+
+			const scriptDir = dirname(new URL(import.meta.url).pathname);
+			const completionsDir = join(scriptDir, "completions");
+			const home = homedir();
+
+			let source: string;
+			let dest: string;
+
+			switch (shell) {
+				case "fish":
+					source = join(completionsDir, "todosh.fish");
+					dest = join(home, ".config/fish/completions/todosh.fish");
+					break;
+				case "bash":
+					source = join(completionsDir, "todosh.bash");
+					dest = join(home, ".local/share/bash-completion/completions/todosh");
+					break;
+				case "zsh":
+					source = join(completionsDir, "_todosh");
+					dest = join(home, ".local/share/zsh/site-functions/_todosh");
+					break;
+				default:
+					console.error(`Error: Unsupported shell: ${shell}`);
+					console.log("Supported shells: fish, bash, zsh");
+					process.exit(1);
+			}
+
+			const sourceFile = Bun.file(source);
+			if (!(await sourceFile.exists())) {
+				console.error(`Error: Completion file not found: ${source}`);
+				process.exit(1);
+			}
+
+			const destDir = dirname(dest);
+			await Bun.$`mkdir -p ${destDir}`.quiet();
+
+			await Bun.write(dest, sourceFile);
+			console.log(`Installed ${shell} completions to ${dest}`);
+
+			if (shell === "bash") {
+				console.log("Restart your shell or run: source ~/.bashrc");
+			} else if (shell === "zsh") {
+				console.log(
+					"Restart your shell or run: autoload -Uz compinit && compinit",
+				);
+			} else {
+				console.log("Restart your shell to enable completions.");
+			}
 			break;
 		}
 

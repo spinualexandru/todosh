@@ -1,0 +1,70 @@
+#compdef todosh
+
+# Zsh completions for todosh
+
+_todosh() {
+    local -a commands
+    commands=(
+        'boards:List all boards'
+        'board\:create:Create a new board'
+        'board\:delete:Delete a board'
+        'board\:archive:Archive a board'
+        'list:List tasks'
+        'add:Add a new task'
+        'done:Mark task as done'
+        'doing:Mark task as doing'
+        'todo:Mark task as todo'
+        'move:Move task to status'
+        'delete:Delete a task'
+        'archive:Archive a task'
+        'help:Show help'
+    )
+
+    local -a statuses
+    statuses=(todo doing done)
+
+    local -a priorities
+    priorities=(low medium high urgent)
+
+    _arguments -C \
+        '1: :->command' \
+        '*:: :->args'
+
+    case $state in
+        command)
+            _describe -t commands 'todosh command' commands
+            ;;
+        args)
+            case ${words[1]} in
+                list)
+                    _arguments \
+                        '(-b --board)'{-b,--board}'[Filter by board ID]:board id:' \
+                        '(-s --status)'{-s,--status}'[Filter by status]:status:(todo doing done)'
+                    ;;
+                add)
+                    _arguments \
+                        '1:title:' \
+                        '(-b --board)'{-b,--board}'[Board ID]:board id:' \
+                        '(-d --description)'{-d,--description}'[Task description]:description:' \
+                        '(-p --priority)'{-p,--priority}'[Priority level]:priority:(low medium high urgent)'
+                    ;;
+                board:create)
+                    _arguments '1:board name:'
+                    ;;
+                board:delete|board:archive)
+                    _arguments '1:board id:'
+                    ;;
+                done|doing|todo|delete|archive)
+                    _arguments '1:task id:'
+                    ;;
+                move)
+                    _arguments \
+                        '1:task id:' \
+                        '2:status:(todo doing done)'
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_todosh "$@"

@@ -1,12 +1,25 @@
 # Todosh
 
-Todos for the rest of us. A fast, keyboard-driven Kanban task manager for the terminal. IPC Enabled.
+Todos for the rest of us. A fast, keyboard-driven Kanban task manager for the terminal.
 
-## Quick Start
+## Install
 
 ```bash
+# From source (requires Bun)
+git clone https://github.com/alexspinu/todosh
+cd todosh
 bun install
-bun run start
+
+# Symlink to ~/.local/bin
+mkdir -p ~/.local/bin
+ln -sf "$PWD/bin/todosh.ts" ~/.local/bin/todosh
+```
+
+## Usage
+
+```bash
+todosh              # Launch TUI
+todosh <command>    # Run CLI command
 ```
 
 ## Keybinds
@@ -25,10 +38,11 @@ Vim mode: `h/j/k/l` navigation (enable in settings).
 ## CLI
 
 ```bash
-bun cli.ts boards                  # List boards
-bun cli.ts board:create "Work"     # Create board
-bun cli.ts add "Fix bug" -p high   # Add task
-bun cli.ts done 5                  # Mark done
+todosh boards                  # List boards
+todosh board:create "Work"     # Create board
+todosh add "Fix bug" -p high   # Add task
+todosh done 5                  # Mark done
+todosh completions             # Install shell completions
 ```
 
 ## IPC
