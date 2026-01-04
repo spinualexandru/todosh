@@ -2,6 +2,9 @@
 
 Todos for the rest of us. A fast, keyboard-driven Kanban task manager for the terminal.
 
+![recording-term3-ezgif com-optimize](https://github.com/user-attachments/assets/a17619b2-d455-4ab3-b1c0-9dc23eaecbaa)
+
+
 ## Install
 
 ```bash
