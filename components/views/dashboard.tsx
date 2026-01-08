@@ -22,6 +22,7 @@ const dashboardHints = [
 	{ action: "edit", label: "Edit" },
 	{ action: "delete", label: "Delete" },
 	{ action: "archive", label: "Archive" },
+	{ action: "pin", label: "Pin" },
 	{ action: "quit", label: "Quit" },
 ];
 
@@ -36,7 +37,7 @@ export function DashboardView() {
 		archiveBoard,
 	} = useBoards();
 	const { navigate } = useRouter();
-	const { settings } = useSettings();
+	const { settings, updateSettings } = useSettings();
 	const icons = settings.ui.useNerdfonts ? glyphs : fallbackGlyphs;
 
 	const handleExit = () => {
@@ -91,6 +92,16 @@ export function DashboardView() {
 				const board = boards[selectedIndex];
 				if (board) {
 					setModal({ type: "archive", board });
+				}
+			},
+			onPin: () => {
+				const board = boards[selectedIndex];
+				if (board) {
+					if (settings.defaultBoard === board.id) {
+						updateSettings({ defaultBoard: undefined });
+					} else {
+						updateSettings({ defaultBoard: board.id });
+					}
 				}
 			},
 			onBack: handleExit,
@@ -151,6 +162,7 @@ export function DashboardView() {
 							key={board.id}
 							board={board}
 							isSelected={index === selectedIndex}
+							isPinned={settings.defaultBoard === board.id}
 							icons={icons}
 						/>
 					))}
@@ -215,16 +227,18 @@ export function DashboardView() {
 interface BoardItemProps {
 	board: BoardWithStats;
 	isSelected: boolean;
+	isPinned: boolean;
 	icons: typeof glyphs;
 }
 
-function BoardItem({ board, isSelected, icons }: BoardItemProps) {
+function BoardItem({ board, isSelected, isPinned, icons }: BoardItemProps) {
 	return (
 		<Box paddingX={1}>
 			<Text inverse={isSelected} color={isSelected ? "cyan" : undefined}>
 				{" "}
 				{icons.board} {board.name}{" "}
 			</Text>
+			{isPinned && <Text color="yellow"> {icons.pin}</Text>}
 			<Box marginLeft={1} gap={2}>
 				<Text dimColor>
 					{icons.column.todo} {board.todoCount ?? 0}

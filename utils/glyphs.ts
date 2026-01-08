@@ -1,5 +1,6 @@
 export const glyphs = {
 	board: "󰨇",
+	pin: "󰐃",
 	task: "󰄬",
 	todo: "󰝦",
 	doing: "󰦖",
@@ -48,6 +49,7 @@ export const glyphs = {
 
 export const fallbackGlyphs = {
 	board: "[B]",
+	pin: "*",
 	task: "[T]",
 	todo: "[ ]",
 	doing: "[~]",

@@ -6,13 +6,29 @@ import {
 	TableView,
 } from "@components";
 import { useKeymap, useRouter, useSettings } from "@hooks";
+import { getDatabase } from "@lib/db";
 import { startSocketServer, stopSocketServer } from "@lib/ipc";
 import { loadSettings } from "@lib/settings";
+import type { Route } from "@types";
 import { render, Text, useApp } from "ink";
 
 const settings = await loadSettings();
 if (settings?.ipc?.enabled) {
 	startSocketServer();
+}
+
+// Compute initial route based on default board setting
+let initialRoute: Route | undefined;
+if (settings?.defaultBoard) {
+	const db = getDatabase(settings.database?.path);
+	const board = db
+		.query<{ id: number }, [number]>(
+			"SELECT id FROM boards WHERE id = ? AND archived = 0",
+		)
+		.get(settings.defaultBoard);
+	if (board) {
+		initialRoute = { view: "board", boardId: settings.defaultBoard };
+	}
 }
 
 function AppContent() {
@@ -49,7 +65,7 @@ function AppContent() {
 
 function App() {
 	return (
-		<AppProviders>
+		<AppProviders initialRoute={initialRoute}>
 			<AppContent />
 		</AppProviders>
 	);

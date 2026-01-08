@@ -20,6 +20,7 @@ type Action =
 	| "edit"
 	| "move"
 	| "toggleView"
+	| "pin"
 	| "quit";
 
 type KeymapConfig = Record<Action, string[]>;
@@ -42,6 +43,7 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		edit: ["e"],
 		move: ["m"],
 		toggleView: ["tab"],
+		pin: ["p"],
 		quit: ["q"],
 	},
 	vim: {
@@ -61,6 +63,7 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		edit: ["e", "i"],
 		move: ["m"],
 		toggleView: ["tab"],
+		pin: ["p"],
 		quit: ["q"],
 	},
 };
@@ -82,6 +85,7 @@ interface KeymapHandlers {
 	onEdit?: () => void;
 	onMove?: () => void;
 	onToggleView?: () => void;
+	onPin?: () => void;
 	onQuit?: () => void;
 }
 
@@ -159,6 +163,7 @@ export function useKeymap({ handlers, isActive = true }: UseKeymapOptions) {
 				edit: handlers.onEdit,
 				move: handlers.onMove,
 				toggleView: handlers.onToggleView,
+				pin: handlers.onPin,
 				quit: handlers.onQuit,
 			};
 
