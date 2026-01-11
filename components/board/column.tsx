@@ -44,8 +44,8 @@ export function Column({
 			flexDirection="column"
 			width={width}
 			height={height}
-			borderStyle="single"
-			borderColor={isFocused ? "cyan" : "gray"}
+			borderStyle="double"
+			borderColor={isFocused ? "lightCyan" : "gray"}
 		>
 			<Box
 				paddingX={1}

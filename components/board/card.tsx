@@ -36,9 +36,9 @@ export function Card({
 	return (
 		<Box
 			flexDirection="column"
-			borderStyle={isSelected && isFocused ? "round" : "single"}
+			borderStyle={isSelected && isFocused ? "double" : "single"}
 			borderColor={
-				isSelected && isFocused ? "cyan" : isSelected ? "blue" : "gray"
+				isSelected && isFocused ? "red" : isSelected ? "blue" : "gray"
 			}
 			width={width}
 			paddingX={1}
