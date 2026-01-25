@@ -81,12 +81,8 @@ function getPositionalArgs(args: string[]): string[] {
 }
 
 async function main(): Promise<void> {
-	if (
-		!command ||
-		command === "help" ||
-		command === "--help" ||
-		command === "-h"
-	) {
+	const helpCommands = ["help", "--help", "-h"];
+	if (!command || helpCommands.includes(command)) {
 		printHelp();
 		return;
 	}
