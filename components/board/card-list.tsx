@@ -1,5 +1,9 @@
+import { Text } from "@components/common";
+import { useScrollIntoView } from "@hooks";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import type { TaskWithTags } from "@types";
-import { Box, Text } from "ink";
+import { DIM, inkColor } from "@utils";
+import { useRef } from "react";
 import { Card } from "./card";
 
 interface CardListProps {
@@ -8,7 +12,6 @@ interface CardListProps {
 	isFocused: boolean;
 	useNerdfonts: boolean;
 	width: number;
-	maxHeight: number;
 }
 
 export function CardList({
@@ -17,53 +20,39 @@ export function CardList({
 	isFocused,
 	useNerdfonts,
 	width,
-	maxHeight,
 }: CardListProps) {
+	const scrollRef = useRef<ScrollBoxRenderable>(null);
+	const selectedId = tasks[selectedIndex]?.id;
+	useScrollIntoView(scrollRef, selectedId ? `card-${selectedId}` : undefined);
+
 	if (tasks.length === 0) {
 		return (
-			<Box justifyContent="center" paddingY={1}>
-				<Text dimColor>No tasks</Text>
-			</Box>
+			<box flexDirection="row" justifyContent="center" paddingY={1}>
+				<Text attributes={DIM}>No tasks</Text>
+			</box>
 		);
 	}
 
-	const cardHeight = 3;
-	const visibleCards = Math.floor(maxHeight / cardHeight);
-	const halfVisible = Math.floor(visibleCards / 2);
-
-	let startIndex = Math.max(0, selectedIndex - halfVisible);
-	const endIndex = Math.min(tasks.length, startIndex + visibleCards);
-
-	if (endIndex - startIndex < visibleCards) {
-		startIndex = Math.max(0, endIndex - visibleCards);
-	}
-
-	const visibleTasks = tasks.slice(startIndex, endIndex);
-	const hasMore = endIndex < tasks.length;
-	const hasPrev = startIndex > 0;
-
 	return (
-		<Box flexDirection="column" height={maxHeight}>
-			{hasPrev && (
-				<Box justifyContent="center">
-					<Text dimColor>↑ {startIndex} more</Text>
-				</Box>
-			)}
-			{visibleTasks.map((task, i) => (
+		<scrollbox
+			ref={scrollRef}
+			flexGrow={1}
+			flexBasis={0}
+			scrollbarOptions={{
+				trackOptions: { foregroundColor: inkColor("gray") },
+			}}
+		>
+			{tasks.map((task, i) => (
 				<Card
 					key={task.id}
+					id={`card-${task.id}`}
 					task={task}
-					isSelected={startIndex + i === selectedIndex}
+					isSelected={i === selectedIndex}
 					isFocused={isFocused}
 					useNerdfonts={useNerdfonts}
-					width={width - 2}
+					width={width - 3}
 				/>
 			))}
-			{hasMore && (
-				<Box justifyContent="center">
-					<Text dimColor>↓ {tasks.length - endIndex} more</Text>
-				</Box>
-			)}
-		</Box>
+		</scrollbox>
 	);
 }

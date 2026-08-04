@@ -1,6 +1,6 @@
+import { Text } from "@components/common";
 import type { TaskWithTags } from "@types";
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import { attrs, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface CardProps {
 	task: TaskWithTags;
@@ -8,6 +8,8 @@ interface CardProps {
 	isFocused: boolean;
 	useNerdfonts: boolean;
 	width: number;
+	/** Stable id so the parent scrollbox can scroll this card into view. */
+	id?: string;
 }
 
 const priorityColors: Record<string, string> = {
@@ -23,6 +25,7 @@ export function Card({
 	isFocused,
 	useNerdfonts,
 	width,
+	id,
 }: CardProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
 	const priorityColor = priorityColors[task.priority] ?? "white";
@@ -34,45 +37,52 @@ export function Card({
 			: task.title;
 
 	return (
-		<Box
+		<box
+			id={id}
 			flexDirection="column"
+			border
 			borderStyle={isSelected && isFocused ? "double" : "single"}
-			borderColor={
-				isSelected && isFocused ? "red" : isSelected ? "blue" : "gray"
-			}
+			borderColor={inkColor(
+				isSelected && isFocused ? "red" : isSelected ? "blue" : "gray",
+			)}
 			width={width}
 			paddingX={1}
 		>
-			<Box>
+			<box flexDirection="row">
 				<Text
-					color={priorityColor}
-					bold={task.priority === "urgent" || task.priority === "high"}
+					fg={inkColor(priorityColor)}
+					attributes={attrs({
+						bold: task.priority === "urgent" || task.priority === "high",
+					})}
 				>
 					{icons.priority[task.priority]}{" "}
 				</Text>
-				<Text bold={isSelected} color={isSelected ? "white" : undefined}>
+				<Text
+					attributes={attrs({ bold: isSelected })}
+					fg={isSelected ? inkColor("white") : undefined}
+				>
 					{displayTitle}
 				</Text>
-			</Box>
+			</box>
 			{(task.due_date || task.tags.length > 0) && (
-				<Box gap={1}>
+				<box flexDirection="row" gap={1}>
 					{task.due_date && (
-						<Text dimColor>
+						<Text attributes={DIM}>
 							{icons.calendar} {formatDate(task.due_date)}
 						</Text>
 					)}
 					{task.tags.slice(0, 2).map((tag) => (
-						<Text key={tag.id} color={tag.color as never}>
+						<Text key={tag.id} fg={inkColor(tag.color)}>
 							{icons.tag}
 							{tag.name}
 						</Text>
 					))}
 					{task.tags.length > 2 && (
-						<Text dimColor>+{task.tags.length - 2}</Text>
+						<Text attributes={DIM}>+{task.tags.length - 2}</Text>
 					)}
-				</Box>
+				</box>
 			)}
-		</Box>
+		</box>
 	);
 }
 

@@ -1,10 +1,8 @@
-import { Confirm, Input, Modal } from "@components/common";
+import { Confirm, Input, Modal, Text } from "@components/common";
 import { Shell } from "@components/layout";
-import { useBoards, useKeymap, useRouter, useSettings } from "@hooks";
-import { stopSocketServer } from "@lib/ipc";
+import { useBoards, useKeymap, useQuit, useRouter, useSettings } from "@hooks";
 import type { BoardWithStats } from "@types";
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text, useApp } from "ink";
+import { DIM, fallbackGlyphs, glyphs, inkColor, selection } from "@utils";
 import { useEffect, useState } from "react";
 
 type ModalState =
@@ -27,7 +25,6 @@ const dashboardHints = [
 ];
 
 export function DashboardView() {
-	const { exit } = useApp();
 	const {
 		boards,
 		isLoading,
@@ -40,10 +37,7 @@ export function DashboardView() {
 	const { settings, updateSettings } = useSettings();
 	const icons = settings.ui.useNerdfonts ? glyphs : fallbackGlyphs;
 
-	const handleExit = () => {
-		stopSocketServer();
-		exit();
-	};
+	const handleExit = useQuit();
 
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [modal, setModal] = useState<ModalState>({ type: "none" });
@@ -151,12 +145,12 @@ export function DashboardView() {
 	return (
 		<Shell title="Dashboard" breadcrumbs={["Boards"]} hints={dashboardHints}>
 			{boards.length === 0 ? (
-				<Box flexDirection="column" alignItems="center" marginTop={2}>
-					<Text color="gray">{icons.board} No boards yet</Text>
-					<Text dimColor>Press n to create your first board</Text>
-				</Box>
+				<box flexDirection="column" alignItems="center" marginTop={2}>
+					<Text fg={inkColor("gray")}>{icons.board} No boards yet</Text>
+					<Text attributes={DIM}>Press n to create your first board</Text>
+				</box>
 			) : (
-				<Box flexDirection="column" gap={0}>
+				<box flexDirection="column" gap={0}>
 					{boards.map((board, index) => (
 						<BoardItem
 							key={board.id}
@@ -166,7 +160,7 @@ export function DashboardView() {
 							icons={icons}
 						/>
 					))}
-				</Box>
+				</box>
 			)}
 
 			{modal.type === "create" && (
@@ -179,9 +173,9 @@ export function DashboardView() {
 						onCancel={() => setModal({ type: "none" })}
 						placeholder="Enter board name..."
 					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to create • Esc to cancel</Text>
-					</Box>
+					<box marginTop={1}>
+						<Text attributes={DIM}>Enter to create • Esc to cancel</Text>
+					</box>
 				</Modal>
 			)}
 
@@ -194,9 +188,9 @@ export function DashboardView() {
 						onSubmit={handleEditSubmit}
 						onCancel={() => setModal({ type: "none" })}
 					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to save • Esc to cancel</Text>
-					</Box>
+					<box marginTop={1}>
+						<Text attributes={DIM}>Enter to save • Esc to cancel</Text>
+					</box>
 				</Modal>
 			)}
 
@@ -233,23 +227,23 @@ interface BoardItemProps {
 
 function BoardItem({ board, isSelected, isPinned, icons }: BoardItemProps) {
 	return (
-		<Box paddingX={1}>
-			<Text inverse={isSelected} color={isSelected ? "cyan" : undefined}>
+		<box flexDirection="row" paddingX={1}>
+			<Text {...selection(isSelected, "cyan")}>
 				{" "}
 				{icons.board} {board.name}{" "}
 			</Text>
-			{isPinned && <Text color="yellow"> {icons.pin}</Text>}
-			<Box marginLeft={1} gap={2}>
-				<Text dimColor>
+			{isPinned && <Text fg={inkColor("yellow")}> {icons.pin}</Text>}
+			<box flexDirection="row" marginLeft={1} gap={2}>
+				<Text attributes={DIM}>
 					{icons.column.todo} {board.todoCount ?? 0}
 				</Text>
-				<Text dimColor>
+				<Text attributes={DIM}>
 					{icons.column.doing} {board.doingCount ?? 0}
 				</Text>
-				<Text dimColor>
+				<Text attributes={DIM}>
 					{icons.column.done} {board.doneCount ?? 0}
 				</Text>
-			</Box>
-		</Box>
+			</box>
+		</box>
 	);
 }

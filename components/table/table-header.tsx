@@ -1,5 +1,5 @@
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import { Text } from "@components/common";
+import { BOLD, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface TableHeaderProps {
 	useNerdfonts: boolean;
@@ -17,27 +17,25 @@ export function TableHeader({ useNerdfonts, columns }: TableHeaderProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
 
 	return (
-		<Box
+		<box
+			flexDirection="row"
+			border={["bottom"]}
 			borderStyle="single"
-			borderBottom
-			borderTop={false}
-			borderLeft={false}
-			borderRight={false}
-			borderColor="gray"
+			borderColor={inkColor("gray")}
 			paddingX={1}
 		>
 			{columns.map((col, i) => (
-				<Box key={col.key} width={col.width}>
-					<Box flexGrow={1}>
-						<Text bold color="cyan">
+				<box key={col.key} flexDirection="row" width={col.width}>
+					<box flexDirection="row" flexGrow={1}>
+						<Text attributes={BOLD} fg={inkColor("cyan")}>
 							{col.label}
 						</Text>
-					</Box>
+					</box>
 					{i < columns.length - 1 && (
-						<Text dimColor>{icons.border.vertical}</Text>
+						<Text attributes={DIM}>{icons.border.vertical}</Text>
 					)}
-				</Box>
+				</box>
 			))}
-		</Box>
+		</box>
 	);
 }

@@ -1,5 +1,5 @@
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import { Text } from "@components/common";
+import { BOLD, DIM_ITALIC, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface DescriptionProps {
 	description: string;
@@ -14,43 +14,34 @@ export function Description({
 }: DescriptionProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
 
-	const lines = description ? description.split("\n") : [];
-	const displayLines = lines.slice(0, maxHeight - 2);
-	const hasMore = lines.length > maxHeight - 2;
-
 	return (
-		<Box flexDirection="column" height={maxHeight}>
-			<Box
+		<box flexDirection="column" height={maxHeight}>
+			<box
+				flexDirection="row"
+				border={["bottom"]}
 				borderStyle="single"
-				borderBottom
-				borderTop={false}
-				borderLeft={false}
-				borderRight={false}
-				borderColor="gray"
+				borderColor={inkColor("gray")}
 				marginBottom={1}
 			>
-				<Text bold color="cyan">
+				<Text attributes={BOLD} fg={inkColor("cyan")}>
 					{icons.task} Description
 				</Text>
-			</Box>
+			</box>
 			{description ? (
-				<Box flexDirection="column" flexGrow={1}>
-					{displayLines.map((line, i) => (
-						<Text key={`${i}-${line.slice(0, 20)}`}>{line || " "}</Text>
-					))}
-					{hasMore && (
-						<Text dimColor>
-							... ({lines.length - displayLines.length} more lines)
-						</Text>
-					)}
-				</Box>
+				<scrollbox
+					flexGrow={1}
+					flexBasis={0}
+					scrollbarOptions={{
+						trackOptions: { foregroundColor: inkColor("gray") },
+					}}
+				>
+					<Text wrapMode="word">{description}</Text>
+				</scrollbox>
 			) : (
-				<Box flexGrow={1}>
-					<Text dimColor italic>
-						No description
-					</Text>
-				</Box>
+				<box flexGrow={1}>
+					<Text attributes={DIM_ITALIC}>No description</Text>
+				</box>
 			)}
-		</Box>
+		</box>
 	);
 }

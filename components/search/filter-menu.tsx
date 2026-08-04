@@ -1,7 +1,17 @@
+import { Text } from "@components/common";
+import { useKeys } from "@hooks";
 import type { FilterState } from "@hooks/useFilter";
 import type { Priority, TaskStatus } from "@types";
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text, useInput } from "ink";
+import {
+	attrs,
+	BOLD,
+	DIM,
+	fallbackGlyphs,
+	glyphs,
+	inkColor,
+	optionalInkColor,
+	selection,
+} from "@utils";
 import { useState } from "react";
 
 interface FilterMenuProps {
@@ -39,53 +49,41 @@ export function FilterMenu({
 		priorities.indexOf(filter.priority),
 	);
 
-	useInput((input, key) => {
-		if (key.escape) {
-			onClose();
-			return;
+	const step = (delta: number) => {
+		if (activeRow === "status") {
+			const newIdx = Math.min(
+				statuses.length - 1,
+				Math.max(0, statusIdx + delta),
+			);
+			setStatusIdx(newIdx);
+			onStatusChange(statuses[newIdx] ?? null);
+		} else {
+			const newIdx = Math.min(
+				priorities.length - 1,
+				Math.max(0, priorityIdx + delta),
+			);
+			setPriorityIdx(newIdx);
+			onPriorityChange(priorities[newIdx] ?? null);
 		}
+	};
 
-		if (input === "c") {
-			onClear();
-			setStatusIdx(0);
-			setPriorityIdx(0);
-			return;
-		}
+	const clear = () => {
+		onClear();
+		setStatusIdx(0);
+		setPriorityIdx(0);
+	};
 
-		if (key.upArrow || input === "k") {
-			setActiveRow("status");
-			return;
-		}
-
-		if (key.downArrow || input === "j") {
-			setActiveRow("priority");
-			return;
-		}
-
-		if (key.leftArrow || input === "h") {
-			if (activeRow === "status") {
-				const newIdx = Math.max(0, statusIdx - 1);
-				setStatusIdx(newIdx);
-				onStatusChange(statuses[newIdx] ?? null);
-			} else {
-				const newIdx = Math.max(0, priorityIdx - 1);
-				setPriorityIdx(newIdx);
-				onPriorityChange(priorities[newIdx] ?? null);
-			}
-			return;
-		}
-
-		if (key.rightArrow || input === "l") {
-			if (activeRow === "status") {
-				const newIdx = Math.min(statuses.length - 1, statusIdx + 1);
-				setStatusIdx(newIdx);
-				onStatusChange(statuses[newIdx] ?? null);
-			} else {
-				const newIdx = Math.min(priorities.length - 1, priorityIdx + 1);
-				setPriorityIdx(newIdx);
-				onPriorityChange(priorities[newIdx] ?? null);
-			}
-		}
+	useKeys({
+		escape: onClose,
+		c: clear,
+		up: () => setActiveRow("status"),
+		k: () => setActiveRow("status"),
+		down: () => setActiveRow("priority"),
+		j: () => setActiveRow("priority"),
+		left: () => step(-1),
+		h: () => step(-1),
+		right: () => step(1),
+		l: () => step(1),
 	});
 
 	const statusColors: Record<string, string> = {
@@ -102,54 +100,73 @@ export function FilterMenu({
 	};
 
 	return (
-		<Box
+		<box
 			flexDirection="column"
-			borderStyle="round"
-			borderColor="cyan"
+			border
+			borderStyle="rounded"
+			borderColor={inkColor("cyan")}
 			paddingX={1}
 			marginBottom={1}
 		>
-			<Box marginBottom={1}>
-				<Text color="cyan" bold>
+			<box flexDirection="row" marginBottom={1}>
+				<Text fg={inkColor("cyan")} attributes={BOLD}>
 					{icons.filter} Filters
 				</Text>
-				<Box flexGrow={1} />
-				<Text dimColor>c=clear • Esc=close</Text>
-			</Box>
+				<box flexGrow={1} />
+				<Text attributes={DIM}>c=clear • Esc=close</Text>
+			</box>
 
-			<Box>
-				<Text bold color={activeRow === "status" ? "cyan" : undefined}>
+			<box flexDirection="row">
+				<Text
+					attributes={BOLD}
+					fg={activeRow === "status" ? inkColor("cyan") : undefined}
+				>
 					Status:{" "}
 				</Text>
 				{statuses.map((status, i) => (
 					<Text
 						key={status ?? "all"}
-						inverse={statusIdx === i}
-						color={status ? (statusColors[status] as never) : undefined}
-						dimColor={statusIdx !== i && activeRow !== "status"}
+						attributes={attrs({
+							dim: statusIdx !== i && activeRow !== "status",
+						})}
+						fg={status ? optionalInkColor(statusColors[status]) : undefined}
+						{...selection(
+							statusIdx === i,
+							status ? statusColors[status] : undefined,
+						)}
 					>
 						{" "}
 						{status ? status.toUpperCase() : "ALL"}{" "}
 					</Text>
 				))}
-			</Box>
+			</box>
 
-			<Box>
-				<Text bold color={activeRow === "priority" ? "cyan" : undefined}>
+			<box flexDirection="row">
+				<Text
+					attributes={BOLD}
+					fg={activeRow === "priority" ? inkColor("cyan") : undefined}
+				>
 					Priority:{" "}
 				</Text>
 				{priorities.map((priority, i) => (
 					<Text
 						key={priority ?? "all"}
-						inverse={priorityIdx === i}
-						color={priority ? (priorityColors[priority] as never) : undefined}
-						dimColor={priorityIdx !== i && activeRow !== "priority"}
+						attributes={attrs({
+							dim: priorityIdx !== i && activeRow !== "priority",
+						})}
+						fg={
+							priority ? optionalInkColor(priorityColors[priority]) : undefined
+						}
+						{...selection(
+							priorityIdx === i,
+							priority ? priorityColors[priority] : undefined,
+						)}
 					>
 						{" "}
 						{priority ? priority.toUpperCase() : "ALL"}{" "}
 					</Text>
 				))}
-			</Box>
-		</Box>
+			</box>
+		</box>
 	);
 }

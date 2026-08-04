@@ -1,4 +1,4 @@
-import { Text } from "ink";
+import { Text } from "@components/common";
 
 const banner = [
 	" __        __   _                            _          _____          _           _     ",

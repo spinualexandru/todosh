@@ -1,6 +1,6 @@
+import { Text } from "@components/common";
 import type { Priority, Tag, TaskStatus } from "@types";
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import { BOLD, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface FieldsProps {
 	status: TaskStatus;
@@ -43,28 +43,26 @@ export function Fields({
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
 
 	return (
-		<Box flexDirection="column" gap={1}>
-			<Box
+		<box flexDirection="column" gap={1}>
+			<box
+				flexDirection="row"
+				border={["bottom"]}
 				borderStyle="single"
-				borderBottom
-				borderTop={false}
-				borderLeft={false}
-				borderRight={false}
-				borderColor="gray"
+				borderColor={inkColor("gray")}
 			>
-				<Text bold color="cyan">
+				<Text attributes={BOLD} fg={inkColor("cyan")}>
 					Details
 				</Text>
-			</Box>
+			</box>
 
 			<Field label="Status">
-				<Text color={statusColors[status] as never}>
+				<Text fg={inkColor(statusColors[status])}>
 					{icons.column[status]} {statusLabels[status]}
 				</Text>
 			</Field>
 
 			<Field label="Priority">
-				<Text color={priorityColors[priority] as never}>
+				<Text fg={inkColor(priorityColors[priority])}>
 					{icons.priority[priority]}{" "}
 					{priority.charAt(0).toUpperCase() + priority.slice(1)}
 				</Text>
@@ -76,29 +74,29 @@ export function Fields({
 						{icons.calendar} {formatDate(dueDate)}
 					</Text>
 				) : (
-					<Text dimColor>Not set</Text>
+					<Text attributes={DIM}>Not set</Text>
 				)}
 			</Field>
 
 			<Field label="Tags">
 				{tags.length > 0 ? (
-					<Box flexDirection="column">
+					<box flexDirection="column">
 						{tags.map((tag) => (
-							<Text key={tag.id} color={tag.color as never}>
+							<Text key={tag.id} fg={inkColor(tag.color)}>
 								{icons.tag} {tag.name}
 							</Text>
 						))}
-					</Box>
+					</box>
 				) : (
-					<Text dimColor>No tags</Text>
+					<Text attributes={DIM}>No tags</Text>
 				)}
 			</Field>
 
-			<Box marginTop={1} flexDirection="column">
-				<Text dimColor>Created: {formatDateTime(createdAt)}</Text>
-				<Text dimColor>Updated: {formatDateTime(updatedAt)}</Text>
-			</Box>
-		</Box>
+			<box marginTop={1} flexDirection="column">
+				<Text attributes={DIM}>Created: {formatDateTime(createdAt)}</Text>
+				<Text attributes={DIM}>Updated: {formatDateTime(updatedAt)}</Text>
+			</box>
+		</box>
 	);
 }
 
@@ -109,10 +107,12 @@ interface FieldProps {
 
 function Field({ label, children }: FieldProps) {
 	return (
-		<Box flexDirection="column">
-			<Text dimColor>{label}</Text>
-			<Box marginLeft={1}>{children}</Box>
-		</Box>
+		<box flexDirection="column">
+			<Text attributes={DIM}>{label}</Text>
+			<box flexDirection="row" marginLeft={1}>
+				{children}
+			</box>
+		</box>
 	);
 }
 

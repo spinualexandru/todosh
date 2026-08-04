@@ -1,31 +1,50 @@
+import { Text } from "@components/common";
+import { useScrollIntoView } from "@hooks";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Comment as CommentType } from "@types";
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import {
+	BOLD,
+	DIM,
+	DIM_ITALIC,
+	fallbackGlyphs,
+	glyphs,
+	inkColor,
+} from "@utils";
+import { useRef } from "react";
 
 interface CommentProps {
 	comment: CommentType;
 	isSelected: boolean;
 	useNerdfonts: boolean;
+	/** Stable id so the parent scrollbox can scroll this comment into view. */
+	id?: string;
 }
 
-export function Comment({ comment, isSelected, useNerdfonts }: CommentProps) {
+export function Comment({
+	comment,
+	isSelected,
+	useNerdfonts,
+	id,
+}: CommentProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
 
 	return (
-		<Box
+		<box
+			id={id}
 			flexDirection="column"
-			borderStyle={isSelected ? "round" : "single"}
-			borderColor={isSelected ? "cyan" : "gray"}
+			border
+			borderStyle={isSelected ? "rounded" : "single"}
+			borderColor={inkColor(isSelected ? "cyan" : "gray")}
 			paddingX={1}
 			marginBottom={1}
 		>
-			<Box>
-				<Text dimColor>
+			<box flexDirection="row">
+				<Text attributes={DIM}>
 					{icons.comment} {formatDateTime(comment.created_at)}
 				</Text>
-			</Box>
+			</box>
 			<Text>{comment.content}</Text>
-		</Box>
+		</box>
 	);
 }
 
@@ -43,70 +62,64 @@ export function CommentList({
 	maxHeight,
 }: CommentListProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
+	const scrollRef = useRef<ScrollBoxRenderable>(null);
+	const selectedId = comments[selectedIndex]?.id;
+	useScrollIntoView(
+		scrollRef,
+		selectedId ? `comment-${selectedId}` : undefined,
+	);
 
 	if (comments.length === 0) {
 		return (
-			<Box flexDirection="column">
-				<Box
+			<box flexDirection="column">
+				<box
+					flexDirection="row"
+					border={["bottom"]}
 					borderStyle="single"
-					borderBottom
-					borderTop={false}
-					borderLeft={false}
-					borderRight={false}
-					borderColor="gray"
+					borderColor={inkColor("gray")}
 					marginBottom={1}
 				>
-					<Text bold color="cyan">
+					<Text attributes={BOLD} fg={inkColor("cyan")}>
 						{icons.comment} Comments
 					</Text>
-				</Box>
-				<Text dimColor italic>
-					No comments yet
-				</Text>
-			</Box>
+				</box>
+				<Text attributes={DIM_ITALIC}>No comments yet</Text>
+			</box>
 		);
 	}
 
-	const commentHeight = 4;
-	const visibleCount = Math.max(1, Math.floor((maxHeight - 2) / commentHeight));
-	const halfVisible = Math.floor(visibleCount / 2);
-
-	let startIndex = Math.max(0, selectedIndex - halfVisible);
-	const endIndex = Math.min(comments.length, startIndex + visibleCount);
-	if (endIndex - startIndex < visibleCount) {
-		startIndex = Math.max(0, endIndex - visibleCount);
-	}
-
-	const visibleComments = comments.slice(startIndex, endIndex);
-
 	return (
-		<Box flexDirection="column" height={maxHeight}>
-			<Box
+		<box flexDirection="column" height={maxHeight}>
+			<box
+				flexDirection="row"
+				border={["bottom"]}
 				borderStyle="single"
-				borderBottom
-				borderTop={false}
-				borderLeft={false}
-				borderRight={false}
-				borderColor="gray"
+				borderColor={inkColor("gray")}
 				marginBottom={1}
 			>
-				<Text bold color="cyan">
+				<Text attributes={BOLD} fg={inkColor("cyan")}>
 					{icons.comment} Comments ({comments.length})
 				</Text>
-			</Box>
-			{startIndex > 0 && <Text dimColor>↑ {startIndex} more</Text>}
-			{visibleComments.map((comment, i) => (
-				<Comment
-					key={comment.id}
-					comment={comment}
-					isSelected={startIndex + i === selectedIndex}
-					useNerdfonts={useNerdfonts}
-				/>
-			))}
-			{endIndex < comments.length && (
-				<Text dimColor>↓ {comments.length - endIndex} more</Text>
-			)}
-		</Box>
+			</box>
+			<scrollbox
+				ref={scrollRef}
+				flexGrow={1}
+				flexBasis={0}
+				scrollbarOptions={{
+					trackOptions: { foregroundColor: inkColor("gray") },
+				}}
+			>
+				{comments.map((comment, i) => (
+					<Comment
+						key={comment.id}
+						id={`comment-${comment.id}`}
+						comment={comment}
+						isSelected={i === selectedIndex}
+						useNerdfonts={useNerdfonts}
+					/>
+				))}
+			</scrollbox>
+		</box>
 	);
 }
 

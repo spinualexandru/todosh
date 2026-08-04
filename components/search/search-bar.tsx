@@ -1,6 +1,6 @@
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text, useInput } from "ink";
-import { useEffect, useState } from "react";
+import { Text } from "@components/common";
+import { useEscapeKey, useInputFocus } from "@hooks";
+import { DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface SearchBarProps {
 	value: string;
@@ -18,61 +18,31 @@ export function SearchBar({
 	useNerdfonts,
 }: SearchBarProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
-	const [cursorPos, setCursorPos] = useState(value.length);
 
-	useEffect(() => {
-		setCursorPos(value.length);
-	}, [value.length]);
-
-	useInput((input, key) => {
-		if (key.escape) {
-			onClose();
-			return;
-		}
-
-		if (key.backspace || key.delete) {
-			if (cursorPos > 0) {
-				const newValue = value.slice(0, cursorPos - 1) + value.slice(cursorPos);
-				onChange(newValue);
-				setCursorPos(cursorPos - 1);
-			}
-			return;
-		}
-
-		if (key.leftArrow) {
-			setCursorPos(Math.max(0, cursorPos - 1));
-			return;
-		}
-
-		if (key.rightArrow) {
-			setCursorPos(Math.min(value.length, cursorPos + 1));
-			return;
-		}
-
-		if (input && !key.ctrl && !key.meta && !key.return) {
-			const newValue =
-				value.slice(0, cursorPos) + input + value.slice(cursorPos);
-			onChange(newValue);
-			setCursorPos(cursorPos + input.length);
-		}
-	});
-
-	const beforeCursor = value.slice(0, cursorPos);
-	const cursorChar = value[cursorPos] || " ";
-	const afterCursor = value.slice(cursorPos + 1);
+	useInputFocus(true);
+	useEscapeKey(onClose);
 
 	return (
-		<Box borderStyle="round" borderColor="cyan" paddingX={1} marginBottom={1}>
-			<Text color="cyan">{icons.search} </Text>
-			<Text>
-				<Text>{beforeCursor}</Text>
-				<Text inverse>{cursorChar}</Text>
-				<Text>{afterCursor}</Text>
-			</Text>
-			<Box flexGrow={1} />
-			<Text dimColor>
+		<box
+			flexDirection="row"
+			border
+			borderStyle="rounded"
+			borderColor={inkColor("cyan")}
+			paddingX={1}
+			marginBottom={1}
+		>
+			<Text fg={inkColor("cyan")}>{icons.search} </Text>
+			<input
+				flexGrow={1}
+				focused
+				value={value}
+				onInput={onChange}
+				textColor={inkColor("white")}
+				cursorColor={inkColor("cyan")}
+			/>
+			<Text attributes={DIM}>
 				{resultCount} result{resultCount !== 1 ? "s" : ""} • Esc to close
 			</Text>
-		</Box>
+		</box>
 	);
 }

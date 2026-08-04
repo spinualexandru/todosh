@@ -1,6 +1,7 @@
+import { Text } from "@components/common";
 import { useRouter, useSettings } from "@hooks";
 import { getKeybindHint } from "@hooks/useKeymap";
-import { Box, Text } from "ink";
+import { BOLD, DIM, inkColor } from "@utils";
 
 interface KeyHint {
 	action: string;
@@ -30,27 +31,25 @@ export function Footer({ hints = defaultHints }: FooterProps) {
 	});
 
 	return (
-		<Box
+		<box
+			flexDirection="row"
 			paddingX={1}
+			border={["top"]}
 			borderStyle="single"
-			borderTop
-			borderBottom={false}
-			borderLeft={false}
-			borderRight={false}
-			borderColor="gray"
+			borderColor={inkColor("gray")}
 			gap={2}
 		>
 			{filteredHints.map((hint) => (
-				<Box key={hint.action} gap={1}>
-					<Text color="cyan" bold>
+				<box key={hint.action} flexDirection="row" gap={1}>
+					<Text fg={inkColor("cyan")} attributes={BOLD}>
 						{getKeybindHint(
 							hint.action as Parameters<typeof getKeybindHint>[0],
 							mode,
 						)}
 					</Text>
-					<Text dimColor>{hint.label}</Text>
-				</Box>
+					<Text attributes={DIM}>{hint.label}</Text>
+				</box>
 			))}
-		</Box>
+		</box>
 	);
 }

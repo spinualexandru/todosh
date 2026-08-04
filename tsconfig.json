@@ -1,12 +1,13 @@
 {
 	"compilerOptions": {
 		// Environment setup & latest features
-		"lib": ["ESNext"],
+		"lib": ["ESNext", "DOM"],
 		"target": "ESNext",
 		"module": "Preserve",
 		"moduleDetection": "force",
 		"baseUrl": "./",
 		"jsx": "react-jsx",
+		"jsxImportSource": "@opentui/react",
 		"allowJs": true,
 
 		// Bundler mode

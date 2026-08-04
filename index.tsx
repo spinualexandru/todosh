@@ -4,13 +4,23 @@ import {
 	DashboardView,
 	DetailView,
 	TableView,
+	Text,
 } from "@components";
-import { useKeymap, useRouter, useSettings } from "@hooks";
+import {
+	KeymapPriority,
+	useKeymap,
+	useQuit,
+	useRouter,
+	useSettings,
+} from "@hooks";
 import { getDatabase } from "@lib/db";
 import { startSocketServer, stopSocketServer } from "@lib/ipc";
 import { loadSettings } from "@lib/settings";
+import { createCliRenderer } from "@opentui/core";
+import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui";
+import { KeymapProvider } from "@opentui/keymap/react";
+import { createRoot } from "@opentui/react";
 import type { Route } from "@types";
-import { render, Text, useApp } from "ink";
 
 const settings = await loadSettings();
 if (settings?.ipc?.enabled) {
@@ -32,17 +42,13 @@ if (settings?.defaultBoard) {
 }
 
 function AppContent() {
-	const { exit } = useApp();
+	const quit = useQuit();
 	const { route } = useRouter();
 	const { isLoading } = useSettings();
 
 	useKeymap({
-		handlers: {
-			onQuit: () => {
-				stopSocketServer();
-				exit();
-			},
-		},
+		handlers: { onQuit: quit },
+		priority: KeymapPriority.root,
 	});
 
 	if (isLoading) {
@@ -71,4 +77,17 @@ function App() {
 	);
 }
 
-render(<App />);
+const renderer = await createCliRenderer({
+	exitOnCtrlC: true,
+	// Ctrl+C and exit signals route through destroy(), so the IPC socket is
+	// unlinked on every shutdown path rather than only a clean quit.
+	onDestroy: () => stopSocketServer(),
+});
+
+const keymap = createDefaultOpenTuiKeymap(renderer);
+
+createRoot(renderer).render(
+	<KeymapProvider keymap={keymap}>
+		<App />
+	</KeymapProvider>,
+);

@@ -1,6 +1,6 @@
+import { Text } from "@components/common";
 import type { TaskWithTags } from "@types";
-import { fallbackGlyphs, glyphs } from "@utils";
-import { Box, Text } from "ink";
+import { attrs, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 import type { ColumnConfig } from "./table-header";
 
 interface TableRowProps {
@@ -8,6 +8,8 @@ interface TableRowProps {
 	isSelected: boolean;
 	useNerdfonts: boolean;
 	columns: ColumnConfig[];
+	/** Stable id so the parent scrollbox can scroll this row into view. */
+	id?: string;
 }
 
 const priorityColors: Record<string, string> = {
@@ -28,8 +30,10 @@ export function TableRow({
 	isSelected,
 	useNerdfonts,
 	columns,
+	id,
 }: TableRowProps) {
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
+	const selectedFg = isSelected ? inkColor("black") : undefined;
 
 	const renderCell = (key: string, width: number) => {
 		switch (key) {
@@ -39,44 +43,37 @@ export function TableRow({
 					task.title.length > maxLen
 						? `${task.title.slice(0, maxLen - 1)}…`
 						: task.title;
-				return <Text color={isSelected ? "black" : undefined}>{title}</Text>;
+				return <Text fg={selectedFg}>{title}</Text>;
 			}
 			case "status":
 				return (
-					<Text
-						color={isSelected ? "black" : (statusColors[task.status] as never)}
-					>
+					<Text fg={selectedFg ?? inkColor(statusColors[task.status] ?? "")}>
 						{icons.column[task.status]} {task.status.toUpperCase()}
 					</Text>
 				);
 			case "priority":
 				return (
 					<Text
-						color={
-							isSelected ? "black" : (priorityColors[task.priority] as never)
-						}
+						fg={selectedFg ?? inkColor(priorityColors[task.priority] ?? "")}
 					>
 						{icons.priority[task.priority]} {task.priority}
 					</Text>
 				);
 			case "due_date":
 				return (
-					<Text
-						dimColor={!task.due_date}
-						color={isSelected ? "black" : undefined}
-					>
+					<Text attributes={attrs({ dim: !task.due_date })} fg={selectedFg}>
 						{task.due_date ? formatDate(task.due_date) : "-"}
 					</Text>
 				);
 			case "tags":
 				if (task.tags.length === 0)
 					return (
-						<Text dimColor color={isSelected ? "black" : undefined}>
+						<Text attributes={DIM} fg={selectedFg}>
 							-
 						</Text>
 					);
 				return (
-					<Text color={isSelected ? "black" : undefined}>
+					<Text fg={selectedFg}>
 						{task.tags
 							.slice(0, 2)
 							.map((t) => t.name)
@@ -90,18 +87,28 @@ export function TableRow({
 	};
 
 	return (
-		<Box paddingX={1} backgroundColor={isSelected ? "blue" : undefined}>
+		<box
+			id={id}
+			flexDirection="row"
+			paddingX={1}
+			backgroundColor={isSelected ? inkColor("blue") : undefined}
+		>
 			{columns.map((col, i) => (
-				<Box key={col.key} width={col.width}>
-					<Box flexGrow={1}>{renderCell(col.key, col.width)}</Box>
+				<box key={col.key} flexDirection="row" width={col.width}>
+					<box flexDirection="row" flexGrow={1}>
+						{renderCell(col.key, col.width)}
+					</box>
 					{i < columns.length - 1 && (
-						<Text dimColor color={isSelected ? "red" : undefined}>
+						<Text
+							attributes={DIM}
+							fg={isSelected ? inkColor("red") : undefined}
+						>
 							{icons.border.vertical}
 						</Text>
 					)}
-				</Box>
+				</box>
 			))}
-		</Box>
+		</box>
 	);
 }
 

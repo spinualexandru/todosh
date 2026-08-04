@@ -4,23 +4,27 @@ import {
 	Input,
 	Modal,
 	type TaskUpdates,
+	Text,
 } from "@components/common";
 import { Shell } from "@components/layout";
 import { FilterMenu, SearchBar } from "@components/search";
 import { type ColumnConfig, TableHeader, TableRow } from "@components/table";
 import {
-	getTerminalSize,
+	KeymapPriority,
 	useBoards,
 	useFilter,
 	useKeymap,
 	useRouter,
+	useScrollIntoView,
 	useSearch,
 	useSettings,
+	useTerminalSize,
 } from "@hooks";
 import { useTasks } from "@hooks/useTasks";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import type { TaskStatus, TaskWithTags } from "@types";
-import { Box, Text, useStdout } from "ink";
-import { useEffect, useMemo, useState } from "react";
+import { attrs, DIM, inkColor, selection } from "@utils";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface TableViewProps {
 	boardId: number;
@@ -50,8 +54,7 @@ const tableHints = [
 ];
 
 export function TableView({ boardId }: TableViewProps) {
-	const { stdout } = useStdout();
-	const { columns: termCols, rows } = getTerminalSize(stdout);
+	const { columns: termCols } = useTerminalSize();
 	const { getBoard } = useBoards();
 	const {
 		tasks,
@@ -102,6 +105,12 @@ export function TableView({ boardId }: TableViewProps) {
 	const isModalOpen = modal.type !== "none";
 	const isInputActive = isSearching || isFiltering || isModalOpen;
 	const selectedTask = filteredTasks[selectedIndex];
+
+	const scrollRef = useRef<ScrollBoxRenderable>(null);
+	useScrollIntoView(
+		scrollRef,
+		selectedTask ? `row-${selectedTask.id}` : undefined,
+	);
 
 	const tableColumns: ColumnConfig[] = useMemo(() => {
 		const availableWidth = termCols - 6;
@@ -222,7 +231,7 @@ export function TableView({ boardId }: TableViewProps) {
 				breadcrumbs={["Boards", "???"]}
 				hints={tableHints}
 			>
-				<Text color="red">Board not found</Text>
+				<Text fg={inkColor("red")}>Board not found</Text>
 			</Shell>
 		);
 	}
@@ -238,20 +247,6 @@ export function TableView({ boardId }: TableViewProps) {
 			</Shell>
 		);
 	}
-
-	const searchBarHeight = isSearching ? 3 : 0;
-	const filterMenuHeight = isFiltering ? 5 : 0;
-	const filterIndicatorHeight =
-		!isSearching && !isFiltering && (query || hasActiveFilters) ? 1 : 0;
-	const maxVisibleRows =
-		rows - 8 - searchBarHeight - filterMenuHeight - filterIndicatorHeight;
-	const halfVisible = Math.floor(maxVisibleRows / 2);
-	let startIndex = Math.max(0, selectedIndex - halfVisible);
-	const endIndex = Math.min(filteredTasks.length, startIndex + maxVisibleRows);
-	if (endIndex - startIndex < maxVisibleRows) {
-		startIndex = Math.max(0, endIndex - maxVisibleRows);
-	}
-	const visibleTasks = filteredTasks.slice(startIndex, endIndex);
 
 	return (
 		<Shell
@@ -281,51 +276,51 @@ export function TableView({ boardId }: TableViewProps) {
 			)}
 
 			{!isSearching && !isFiltering && (query || hasActiveFilters) && (
-				<Box marginBottom={1} gap={2}>
-					{query && <Text dimColor>Search: "{query}"</Text>}
+				<box flexDirection="row" marginBottom={1} gap={2}>
+					{query && <Text attributes={DIM}>Search: "{query}"</Text>}
 					{hasActiveFilters && (
-						<Text dimColor>Filters active (Esc to clear)</Text>
+						<Text attributes={DIM}>Filters active (Esc to clear)</Text>
 					)}
-				</Box>
+				</box>
 			)}
 
 			{filteredTasks.length === 0 ? (
-				<Box flexDirection="column" alignItems="center" marginTop={2}>
+				<box flexDirection="column" alignItems="center" marginTop={2}>
 					{tasks.length === 0 ? (
 						<>
-							<Text dimColor>No tasks yet</Text>
-							<Text dimColor>Press n to create your first task</Text>
+							<Text attributes={DIM}>No tasks yet</Text>
+							<Text attributes={DIM}>Press n to create your first task</Text>
 						</>
 					) : (
-						<Text dimColor>No tasks match current filters</Text>
+						<Text attributes={DIM}>No tasks match current filters</Text>
 					)}
-				</Box>
+				</box>
 			) : (
-				<Box flexDirection="column">
+				<box flexDirection="column" flexGrow={1} flexBasis={0}>
 					<TableHeader
 						useNerdfonts={settings.ui.useNerdfonts}
 						columns={tableColumns}
 					/>
-					{startIndex > 0 && (
-						<Box paddingX={1}>
-							<Text dimColor>↑ {startIndex} more</Text>
-						</Box>
-					)}
-					{visibleTasks.map((task, i) => (
-						<TableRow
-							key={task.id}
-							task={task}
-							isSelected={startIndex + i === selectedIndex}
-							useNerdfonts={settings.ui.useNerdfonts}
-							columns={tableColumns}
-						/>
-					))}
-					{endIndex < filteredTasks.length && (
-						<Box paddingX={1}>
-							<Text dimColor>↓ {filteredTasks.length - endIndex} more</Text>
-						</Box>
-					)}
-				</Box>
+					<scrollbox
+						ref={scrollRef}
+						flexGrow={1}
+						flexBasis={0}
+						scrollbarOptions={{
+							trackOptions: { foregroundColor: inkColor("gray") },
+						}}
+					>
+						{filteredTasks.map((task, i) => (
+							<TableRow
+								key={task.id}
+								id={`row-${task.id}`}
+								task={task}
+								isSelected={i === selectedIndex}
+								useNerdfonts={settings.ui.useNerdfonts}
+								columns={tableColumns}
+							/>
+						))}
+					</scrollbox>
+				</box>
 			)}
 
 			{modal.type === "create" && (
@@ -338,9 +333,9 @@ export function TableView({ boardId }: TableViewProps) {
 						onCancel={() => setModal({ type: "none" })}
 						placeholder="Enter task title..."
 					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to create • Esc to cancel</Text>
-					</Box>
+					<box marginTop={1}>
+						<Text attributes={DIM}>Enter to create • Esc to cancel</Text>
+					</box>
 				</Modal>
 			)}
 
@@ -396,6 +391,7 @@ function MoveModal({ task, onMove, onCancel }: MoveModalProps) {
 	);
 
 	useKeymap({
+		priority: KeymapPriority.overlay,
 		handlers: {
 			onLeft: () => setSelected((s) => Math.max(0, s - 1)),
 			onRight: () => setSelected((s) => Math.min(2, s + 1)),
@@ -414,29 +410,25 @@ function MoveModal({ task, onMove, onCancel }: MoveModalProps) {
 	return (
 		<Modal title="Move Task">
 			<Text>Move "{task.title}" to:</Text>
-			<Box marginTop={1} gap={2}>
+			<box flexDirection="row" marginTop={1} gap={2}>
 				{statuses.map((status, i) => (
-					<Box key={status}>
+					<box key={status} flexDirection="row">
 						<Text
-							inverse={selected === i}
-							color={
-								status === task.status
-									? "gray"
-									: selected === i
-										? "cyan"
-										: undefined
-							}
-							dimColor={status === task.status}
+							attributes={attrs({ dim: status === task.status })}
+							fg={status === task.status ? inkColor("gray") : undefined}
+							{...selection(selected === i, "cyan")}
 						>
 							{" "}
 							{status.toUpperCase()}{" "}
 						</Text>
-					</Box>
+					</box>
 				))}
-			</Box>
-			<Box marginTop={1}>
-				<Text dimColor>←/→ to select • Enter to move • Esc to cancel</Text>
-			</Box>
+			</box>
+			<box marginTop={1}>
+				<Text attributes={DIM}>
+					←/→ to select • Enter to move • Esc to cancel
+				</Text>
+			</box>
 		</Modal>
 	);
 }

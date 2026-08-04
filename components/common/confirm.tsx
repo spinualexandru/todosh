@@ -1,6 +1,8 @@
-import { Box, Text, useInput } from "ink";
+import { useKeys } from "@hooks";
+import { DIM, selection } from "@utils";
 import { useState } from "react";
 import { Modal } from "./modal";
+import { Text } from "./text";
 
 interface ConfirmProps {
 	title: string;
@@ -23,50 +25,36 @@ export function Confirm({
 }: ConfirmProps) {
 	const [selected, setSelected] = useState(0);
 
-	useInput((input, key) => {
-		if (key.leftArrow || input === "h") {
-			setSelected(0);
-		} else if (key.rightArrow || input === "l") {
-			setSelected(1);
-		} else if (key.return) {
-			if (selected === 0) {
-				onCancel();
-			} else {
-				onConfirm();
-			}
-		} else if (key.escape || input === "n") {
-			onCancel();
-		} else if (input === "y") {
-			onConfirm();
-		}
+	useKeys({
+		left: () => setSelected(0),
+		h: () => setSelected(0),
+		right: () => setSelected(1),
+		l: () => setSelected(1),
+		return: () => (selected === 0 ? onCancel() : onConfirm()),
+		escape: onCancel,
+		n: onCancel,
+		y: onConfirm,
 	});
 
 	return (
 		<Modal title={title}>
 			<Text>{message}</Text>
-			<Box marginTop={1} gap={2}>
-				<Box>
-					<Text
-						inverse={selected === 0}
-						color={selected === 0 ? "white" : undefined}
-					>
-						{" "}
-						{cancelLabel}{" "}
-					</Text>
-				</Box>
-				<Box>
-					<Text
-						inverse={selected === 1}
-						color={selected === 1 ? (dangerous ? "red" : "green") : undefined}
-					>
+			<box flexDirection="row" marginTop={1} gap={2}>
+				<box flexDirection="row">
+					<Text {...selection(selected === 0, "white")}> {cancelLabel} </Text>
+				</box>
+				<box flexDirection="row">
+					<Text {...selection(selected === 1, dangerous ? "red" : "green")}>
 						{" "}
 						{confirmLabel}{" "}
 					</Text>
-				</Box>
-			</Box>
-			<Box marginTop={1}>
-				<Text dimColor>←/→ to select • Enter to confirm • Esc to cancel</Text>
-			</Box>
+				</box>
+			</box>
+			<box flexDirection="row" marginTop={1}>
+				<Text attributes={DIM}>
+					←/→ to select • Enter to confirm • Esc to cancel
+				</Text>
+			</box>
 		</Modal>
 	);
 }

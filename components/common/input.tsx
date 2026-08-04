@@ -1,5 +1,15 @@
-import { Box, Text, useInput } from "ink";
-import { useEffect, useState } from "react";
+import { useEscapeKey, useInputFocus } from "@hooks";
+import type { InputProps as OpenTuiInputProps } from "@opentui/react";
+import { BOLD, DIM, inkColor } from "@utils";
+import { Text } from "./text";
+
+/**
+ * `InputRenderableOptions` inherits `onSubmit(event)` from `TextareaOptions`
+ * while `InputProps` adds `onSubmit(value)`, so the JSX prop type is the
+ * intersection of both. The reconciler binds this prop to `InputRenderable`'s
+ * ENTER event, which emits the string value, so the string form is correct.
+ */
+type SubmitHandler = NonNullable<OpenTuiInputProps["onSubmit"]>;
 
 interface InputProps {
 	value: string;
@@ -20,77 +30,32 @@ export function Input({
 	label,
 	focus = true,
 }: InputProps) {
-	const [cursorPos, setCursorPos] = useState(value.length);
-
-	useEffect(() => {
-		setCursorPos(value.length);
-	}, [value.length]);
-
-	useInput(
-		(input, key) => {
-			if (key.return && onSubmit) {
-				onSubmit(value);
-				return;
-			}
-
-			if (key.escape && onCancel) {
-				onCancel();
-				return;
-			}
-
-			if (key.backspace || key.delete) {
-				if (cursorPos > 0) {
-					const newValue =
-						value.slice(0, cursorPos - 1) + value.slice(cursorPos);
-					onChange(newValue);
-					setCursorPos(cursorPos - 1);
-				}
-				return;
-			}
-
-			if (key.leftArrow) {
-				setCursorPos(Math.max(0, cursorPos - 1));
-				return;
-			}
-
-			if (key.rightArrow) {
-				setCursorPos(Math.min(value.length, cursorPos + 1));
-				return;
-			}
-
-			if (input && !key.ctrl && !key.meta) {
-				const newValue =
-					value.slice(0, cursorPos) + input + value.slice(cursorPos);
-				onChange(newValue);
-				setCursorPos(cursorPos + input.length);
-			}
-		},
-		{ isActive: focus },
-	);
-
-	const displayValue = value || placeholder;
-	const isPlaceholder = !value && placeholder;
-
-	const beforeCursor = value.slice(0, cursorPos);
-	const cursorChar = value[cursorPos] || " ";
-	const afterCursor = value.slice(cursorPos + 1);
+	useInputFocus(focus);
+	useEscapeKey(onCancel, focus);
 
 	return (
-		<Box>
+		<box flexDirection="row">
 			{label && (
-				<Text color="cyan" bold>
+				<Text fg={inkColor("cyan")} attributes={BOLD}>
 					{label}:{" "}
 				</Text>
 			)}
 			{focus ? (
-				<Text>
-					<Text>{beforeCursor}</Text>
-					<Text inverse>{cursorChar}</Text>
-					<Text>{afterCursor}</Text>
-				</Text>
+				<input
+					flexGrow={1}
+					focused
+					value={value}
+					placeholder={placeholder}
+					onInput={onChange}
+					onSubmit={onSubmit as SubmitHandler | undefined}
+					textColor={inkColor("white")}
+					cursorColor={inkColor("cyan")}
+				/>
 			) : (
-				<Text dimColor={isPlaceholder}>{displayValue}</Text>
+				<Text attributes={!value && placeholder ? DIM : 0}>
+					{value || placeholder}
+				</Text>
 			)}
-		</Box>
+		</box>
 	);
 }

@@ -1,17 +1,18 @@
-import { Input, Modal } from "@components/common";
+import { Input, Modal, Text } from "@components/common";
 import { CommentList, Description, Fields } from "@components/detail";
 import { Shell } from "@components/layout";
 import {
-	getTerminalSize,
+	KeymapPriority,
 	useBoards,
 	useKeymap,
 	useRouter,
 	useSettings,
+	useTerminalSize,
 } from "@hooks";
 import { useComments } from "@hooks/useComments";
 import { useTasks } from "@hooks/useTasks";
 import type { Priority, TaskStatus } from "@types";
-import { Box, Text, useStdout } from "ink";
+import { DIM, inkColor, selection } from "@utils";
 import { useState } from "react";
 
 interface DetailViewProps {
@@ -40,8 +41,7 @@ const detailHints = [
 ];
 
 export function DetailView({ boardId, taskId }: DetailViewProps) {
-	const { stdout } = useStdout();
-	const { columns, rows } = getTerminalSize(stdout);
+	const { columns, rows } = useTerminalSize();
 	const { getBoard } = useBoards();
 	const { getTask, updateTask } = useTasks(boardId);
 	const { comments, addComment } = useComments(taskId);
@@ -138,7 +138,7 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 				breadcrumbs={["Boards", "???", "???"]}
 				hints={detailHints}
 			>
-				<Text color="red">Task not found</Text>
+				<Text fg={inkColor("red")}>Task not found</Text>
 			</Shell>
 		);
 	}
@@ -155,30 +155,27 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 			breadcrumbs={["Boards", board.name, task.title]}
 			hints={detailHints}
 		>
-			<Box gap={1}>
-				<Box flexDirection="column" width={leftWidth}>
+			<box flexDirection="row" gap={1}>
+				<box flexDirection="column" width={leftWidth}>
 					<Description
 						description={task.description}
 						useNerdfonts={settings.ui.useNerdfonts}
 						maxHeight={descHeight}
 					/>
-					<Box marginTop={1}>
+					<box marginTop={1} flexDirection="column" flexGrow={1} flexBasis={0}>
 						<CommentList
 							comments={comments}
 							selectedIndex={focusArea === "comments" ? commentIndex : -1}
 							useNerdfonts={settings.ui.useNerdfonts}
 							maxHeight={commentHeight}
 						/>
-					</Box>
-				</Box>
-				<Box
+					</box>
+				</box>
+				<box
 					width={rightWidth}
+					border={["left"]}
 					borderStyle="single"
-					borderLeft
-					borderRight={false}
-					borderTop={false}
-					borderBottom={false}
-					borderColor={focusArea === "fields" ? "cyan" : "gray"}
+					borderColor={inkColor(focusArea === "fields" ? "cyan" : "gray")}
 					paddingLeft={1}
 				>
 					<Fields
@@ -190,8 +187,8 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 						updatedAt={task.updated_at}
 						useNerdfonts={settings.ui.useNerdfonts}
 					/>
-				</Box>
-			</Box>
+				</box>
+			</box>
 
 			{modal.type === "addComment" && (
 				<Modal title="Add Comment">
@@ -203,9 +200,9 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 						onCancel={() => setModal({ type: "none" })}
 						placeholder="Write a comment..."
 					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to add • Esc to cancel</Text>
-					</Box>
+					<box marginTop={1}>
+						<Text attributes={DIM}>Enter to add • Esc to cancel</Text>
+					</box>
 				</Modal>
 			)}
 
@@ -218,9 +215,9 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 						onSubmit={handleEditDescription}
 						onCancel={() => setModal({ type: "none" })}
 					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to save • Esc to cancel</Text>
-					</Box>
+					<box marginTop={1}>
+						<Text attributes={DIM}>Enter to save • Esc to cancel</Text>
+					</box>
 				</Modal>
 			)}
 
@@ -261,6 +258,7 @@ function StatusPicker({
 	const [selected, setSelected] = useState(statuses.indexOf(current));
 
 	useKeymap({
+		priority: KeymapPriority.overlay,
 		handlers: {
 			onLeft: () => setSelected((s) => Math.max(0, s - 1)),
 			onRight: () => setSelected((s) => Math.min(statuses.length - 1, s + 1)),
@@ -275,23 +273,19 @@ function StatusPicker({
 
 	return (
 		<Modal title="Change Status">
-			<Box gap={2}>
+			<box flexDirection="row" gap={2}>
 				{statuses.map((status, i) => (
-					<Text
-						key={status}
-						inverse={selected === i}
-						color={selected === i ? "cyan" : undefined}
-					>
+					<Text key={status} {...selection(selected === i, "cyan")}>
 						{" "}
 						{status.toUpperCase()}{" "}
 					</Text>
 				))}
-			</Box>
-			<Box marginTop={1}>
-				<Text dimColor>
+			</box>
+			<box marginTop={1}>
+				<Text attributes={DIM}>
 					←/→ select • ↓ priority • Enter confirm • Esc cancel
 				</Text>
-			</Box>
+			</box>
 		</Modal>
 	);
 }
@@ -312,6 +306,7 @@ function PriorityPicker({
 	const [selected, setSelected] = useState(priorities.indexOf(current));
 
 	useKeymap({
+		priority: KeymapPriority.overlay,
 		handlers: {
 			onLeft: () => setSelected((s) => Math.max(0, s - 1)),
 			onRight: () => setSelected((s) => Math.min(priorities.length - 1, s + 1)),
@@ -333,21 +328,19 @@ function PriorityPicker({
 
 	return (
 		<Modal title="Change Priority">
-			<Box gap={2}>
+			<box flexDirection="row" gap={2}>
 				{priorities.map((p, i) => (
-					<Text
-						key={p}
-						inverse={selected === i}
-						color={selected === i ? priorityColors[p] : undefined}
-					>
+					<Text key={p} {...selection(selected === i, priorityColors[p])}>
 						{" "}
 						{p.toUpperCase()}{" "}
 					</Text>
 				))}
-			</Box>
-			<Box marginTop={1}>
-				<Text dimColor>←/→ select • ↑ status • Enter confirm • Esc cancel</Text>
-			</Box>
+			</box>
+			<box marginTop={1}>
+				<Text attributes={DIM}>
+					←/→ select • ↑ status • Enter confirm • Esc cancel
+				</Text>
+			</box>
 		</Modal>
 	);
 }

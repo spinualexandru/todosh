@@ -1,6 +1,7 @@
+import { InputFocusContext } from "@contexts/input-focus";
+import { useBindings } from "@opentui/keymap/react";
 import type { KeybindMode } from "@types";
-import { useInput } from "ink";
-import { useCallback, useMemo } from "react";
+import { useContext, useMemo, useRef } from "react";
 import { useSettings } from "./useSettings";
 
 type Action =
@@ -27,12 +28,12 @@ type KeymapConfig = Record<Action, string[]>;
 
 const keymaps: Record<KeybindMode, KeymapConfig> = {
 	default: {
-		up: ["upArrow"],
-		down: ["downArrow"],
-		left: ["leftArrow"],
-		right: ["rightArrow"],
-		moveLeft: ["alt+leftArrow"],
-		moveRight: ["alt+rightArrow"],
+		up: ["up"],
+		down: ["down"],
+		left: ["left"],
+		right: ["right"],
+		moveLeft: ["alt+left"],
+		moveRight: ["alt+right"],
 		select: ["return"],
 		back: ["escape", "backspace"],
 		delete: ["d"],
@@ -47,12 +48,12 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		quit: ["q"],
 	},
 	vim: {
-		up: ["upArrow", "k"],
-		down: ["downArrow", "j"],
-		left: ["leftArrow", "h"],
-		right: ["rightArrow", "l"],
-		moveLeft: ["alt+leftArrow", "alt+h"],
-		moveRight: ["alt+rightArrow", "alt+l"],
+		up: ["up", "k"],
+		down: ["down", "j"],
+		left: ["left", "h"],
+		right: ["right", "l"],
+		moveLeft: ["alt+left", "alt+h"],
+		moveRight: ["alt+right", "alt+l"],
 		select: ["return"],
 		back: ["escape"],
 		delete: ["d", "x"],
@@ -67,6 +68,9 @@ const keymaps: Record<KeybindMode, KeymapConfig> = {
 		quit: ["q"],
 	},
 };
+
+/** Iteration order matches the keymap tables, preserving dispatch precedence. */
+const ACTIONS = Object.keys(keymaps.default) as Action[];
 
 interface KeymapHandlers {
 	onUp?: () => void;
@@ -89,100 +93,94 @@ interface KeymapHandlers {
 	onQuit?: () => void;
 }
 
+const HANDLER_KEYS: Record<Action, keyof KeymapHandlers> = {
+	up: "onUp",
+	down: "onDown",
+	left: "onLeft",
+	right: "onRight",
+	moveLeft: "onMoveLeft",
+	moveRight: "onMoveRight",
+	select: "onSelect",
+	back: "onBack",
+	delete: "onDelete",
+	archive: "onArchive",
+	search: "onSearch",
+	help: "onHelp",
+	new: "onNew",
+	edit: "onEdit",
+	move: "onMove",
+	toggleView: "onToggleView",
+	pin: "onPin",
+	quit: "onQuit",
+};
+
+/** Layer priorities. Higher wins; within a priority the newest layer wins. */
+export const KeymapPriority = {
+	/** Always-on app shortcuts. Must lose to everything else. */
+	root: -100,
+	/** The keymap owned by the current view. */
+	view: 0,
+	/** Modals, pickers and other transient overlays. */
+	overlay: 100,
+} as const;
+
 interface UseKeymapOptions {
 	handlers: KeymapHandlers;
 	isActive?: boolean;
+	priority?: number;
+	/**
+	 * Keep the layer live while a text input holds the keyboard. Only the
+	 * inputs' own escape/submit layers should set this.
+	 */
+	allowWhileTyping?: boolean;
 }
 
-function normalizeKey(
-	input: string,
-	key: {
-		upArrow: boolean;
-		downArrow: boolean;
-		leftArrow: boolean;
-		rightArrow: boolean;
-		return: boolean;
-		escape: boolean;
-		backspace: boolean;
-		tab: boolean;
-		meta: boolean;
-	},
-): string {
-	// ESC should never have alt prefix (it's used standalone)
-	if (key.escape) return "escape";
-
-	const prefix = key.meta ? "alt+" : "";
-	if (key.upArrow) return `${prefix}upArrow`;
-	if (key.downArrow) return `${prefix}downArrow`;
-	if (key.leftArrow) return `${prefix}leftArrow`;
-	if (key.rightArrow) return `${prefix}rightArrow`;
-	if (key.return) return `${prefix}return`;
-	if (key.backspace) return `${prefix}backspace`;
-	if (key.tab) return `${prefix}tab`;
-	return `${prefix}${input}`;
-}
-
-export function useKeymap({ handlers, isActive = true }: UseKeymapOptions) {
+export function useKeymap({
+	handlers,
+	isActive = true,
+	priority = KeymapPriority.view,
+	allowWhileTyping = false,
+}: UseKeymapOptions) {
 	const { settings } = useSettings();
-	const keymap = useMemo(
-		() => keymaps[settings.keybinds.mode],
-		[settings.keybinds.mode],
+	const mode = settings.keybinds.mode;
+	const keymap = useMemo(() => keymaps[mode], [mode]);
+
+	const inputFocus = useContext(InputFocusContext);
+	const typing = inputFocus?.inputFocused ?? false;
+
+	// Handlers are inline object literals at every call site, so their identity
+	// changes each render. Read them through a ref instead of re-registering the
+	// keymap layer on every render.
+	const handlersRef = useRef(handlers);
+	handlersRef.current = handlers;
+
+	// Only actions with a handler get a binding. Under Ink the dispatch loop
+	// fell through to a later action when the matched one had no handler;
+	// omitting handler-less bindings reproduces that with a single-winner engine.
+	const boundActions = ACTIONS.filter(
+		(action) => handlers[HANDLER_KEYS[action]] !== undefined,
+	);
+	const signature = boundActions.join(",");
+
+	const enabled = isActive && (allowWhileTyping || !typing);
+
+	useBindings(
+		() => ({
+			enabled,
+			priority,
+			bindings: boundActions.flatMap((action) =>
+				keymap[action].map((key) => ({
+					key,
+					cmd: () => {
+						handlersRef.current[HANDLER_KEYS[action]]?.();
+					},
+				})),
+			),
+		}),
+		[signature, mode, enabled, priority],
 	);
 
-	const handleInput = useCallback(
-		(
-			input: string,
-			key: {
-				upArrow: boolean;
-				downArrow: boolean;
-				leftArrow: boolean;
-				rightArrow: boolean;
-				return: boolean;
-				escape: boolean;
-				backspace: boolean;
-				tab: boolean;
-				meta: boolean;
-			},
-		) => {
-			const normalizedKey = normalizeKey(input, key);
-
-			const actionHandlers: Record<Action, (() => void) | undefined> = {
-				up: handlers.onUp,
-				down: handlers.onDown,
-				left: handlers.onLeft,
-				right: handlers.onRight,
-				moveLeft: handlers.onMoveLeft,
-				moveRight: handlers.onMoveRight,
-				select: handlers.onSelect,
-				back: handlers.onBack,
-				delete: handlers.onDelete,
-				archive: handlers.onArchive,
-				search: handlers.onSearch,
-				help: handlers.onHelp,
-				new: handlers.onNew,
-				edit: handlers.onEdit,
-				move: handlers.onMove,
-				toggleView: handlers.onToggleView,
-				pin: handlers.onPin,
-				quit: handlers.onQuit,
-			};
-
-			for (const [action, keys] of Object.entries(keymap)) {
-				if (keys.includes(normalizedKey)) {
-					const handler = actionHandlers[action as Action];
-					if (handler) {
-						handler();
-						return;
-					}
-				}
-			}
-		},
-		[keymap, handlers],
-	);
-
-	useInput(handleInput, { isActive });
-
-	return { keymap, mode: settings.keybinds.mode };
+	return { keymap, mode };
 }
 
 export function getKeybindHint(action: Action, mode: KeybindMode): string {
@@ -195,13 +193,13 @@ export function getKeybindHint(action: Action, mode: KeybindMode): string {
 		const prefix = hasAlt ? "Alt+" : "";
 
 		switch (baseKey) {
-			case "upArrow":
+			case "up":
 				return `${prefix}↑`;
-			case "downArrow":
+			case "down":
 				return `${prefix}↓`;
-			case "leftArrow":
+			case "left":
 				return `${prefix}←`;
-			case "rightArrow":
+			case "right":
 				return `${prefix}→`;
 			case "return":
 				return `${prefix}⏎`;

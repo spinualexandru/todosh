@@ -1,6 +1,6 @@
-import { getTerminalSize } from "@hooks";
-import { Box, useStdout } from "ink";
-import { type ReactNode, useEffect, useState } from "react";
+import { useTerminalSize } from "@hooks";
+import { inkColor } from "@utils";
+import type { ReactNode } from "react";
 import { Footer } from "./footer";
 import { Header } from "./header";
 
@@ -22,47 +22,34 @@ export function Shell({
 	breadcrumbs = [],
 	hints,
 }: ShellProps) {
-	const { stdout } = useStdout();
-	const [{ columns, rows }, setTerminalSize] = useState(() =>
-		getTerminalSize(stdout),
-	);
-
-	useEffect(() => {
-		setTerminalSize(getTerminalSize(stdout));
-		const handleResize = () => setTerminalSize(getTerminalSize(stdout));
-		stdout?.on?.("resize", handleResize);
-		return () => {
-			stdout?.off?.("resize", handleResize);
-		};
-	}, [stdout]);
-
-	useEffect(() => {
-		stdout?.write("\x1b[2J\x1b[H\x1b[?25l");
-		return () => {
-			stdout?.write("\x1b[?25h");
-		};
-	}, [stdout]);
-
-	const contentHeight = rows - 4;
+	const { columns, rows } = useTerminalSize();
 
 	return (
-		<Box
+		<box
 			width={columns}
 			height={rows}
 			flexDirection="column"
-			borderStyle="round"
-			borderColor="cyan"
+			border
+			borderStyle="rounded"
+			borderColor={inkColor("cyan")}
 		>
 			<Header title={title} breadcrumbs={breadcrumbs} />
-			<Box
+			{/*
+			 * No explicit height: the outer border (2 rows), header (2) and footer
+			 * (2) already claim 6 rows, so letting Yoga size this leaves exactly the
+			 * `rows - 6` the views budget for themselves. Forcing a height here
+			 * over-constrains the column and collapses the header/footer borders.
+			 */}
+			<box
 				flexGrow={1}
-				height={contentHeight}
+				flexShrink={1}
+				flexBasis={0}
 				paddingX={1}
 				flexDirection="column"
 			>
 				{children}
-			</Box>
+			</box>
 			<Footer hints={hints} />
-		</Box>
+		</box>
 	);
 }

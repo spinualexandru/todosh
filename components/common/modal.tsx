@@ -1,6 +1,6 @@
-import { getTerminalSize } from "@hooks";
-import { Box, Text, useStdout } from "ink";
+import { BOLD, defaultBackground, inkColor } from "@utils";
 import type { ReactNode } from "react";
+import { Text } from "./text";
 
 interface ModalProps {
 	title: string;
@@ -9,38 +9,45 @@ interface ModalProps {
 }
 
 export function Modal({ title, children, width = 50 }: ModalProps) {
-	const { stdout } = useStdout();
-	const { columns, rows } = getTerminalSize(stdout);
-
-	const modalWidth = Math.min(width, columns - 4);
-	const left = Math.floor((columns - modalWidth) / 2);
-
 	return (
-		<Box
+		// Absolute positioning takes the overlay out of flow and zIndex lifts it
+		// above its siblings, so Yoga can centre it instead of the hand-computed
+		// marginLeft/marginTop the Ink version needed.
+		<box
 			position="absolute"
-			marginLeft={left}
-			marginTop={Math.floor(rows / 4)}
-			width={modalWidth}
-			flexDirection="column"
-			borderStyle="round"
-			borderColor="cyan"
+			left={0}
+			top={0}
+			width="100%"
+			height="100%"
+			zIndex={100}
+			alignItems="center"
+			justifyContent="center"
 		>
-			<Box
-				paddingX={1}
-				borderStyle="single"
-				borderBottom
-				borderTop={false}
-				borderLeft={false}
-				borderRight={false}
-				borderColor="gray"
+			<box
+				width={width}
+				maxWidth="100%"
+				flexDirection="column"
+				border
+				borderStyle="rounded"
+				borderColor={inkColor("cyan")}
+				// Opaque, or the view underneath blends through the overlay.
+				backgroundColor={defaultBackground()}
 			>
-				<Text bold color="cyan">
-					{title}
-				</Text>
-			</Box>
-			<Box paddingX={1} paddingY={1} flexDirection="column">
-				{children}
-			</Box>
-		</Box>
+				<box
+					flexDirection="row"
+					paddingX={1}
+					border={["bottom"]}
+					borderStyle="single"
+					borderColor={inkColor("gray")}
+				>
+					<Text attributes={BOLD} fg={inkColor("cyan")}>
+						{title}
+					</Text>
+				</box>
+				<box paddingX={1} paddingY={1} flexDirection="column">
+					{children}
+				</box>
+			</box>
+		</box>
 	);
 }

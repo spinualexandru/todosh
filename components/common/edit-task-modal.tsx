@@ -1,8 +1,10 @@
+import { useKeys } from "@hooks";
 import type { Priority, TaskStatus, TaskWithTags } from "@types";
-import { Box, Text, useInput } from "ink";
+import { attrs, DIM, inkColor, selection } from "@utils";
 import { useState } from "react";
 import { Input } from "./input";
 import { Modal } from "./modal";
+import { Text } from "./text";
 
 interface EditTaskModalProps {
 	task: TaskWithTags;
@@ -38,6 +40,13 @@ const fields: EditField[] = [
 const statuses: TaskStatus[] = ["todo", "doing", "done"];
 const priorities: Priority[] = ["low", "medium", "high", "urgent"];
 
+const priorityColors: Record<Priority, string> = {
+	urgent: "red",
+	high: "yellow",
+	low: "gray",
+	medium: "cyan",
+};
+
 export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 	const [activeField, setActiveField] = useState<EditField>("title");
 	const [isEditing, setIsEditing] = useState(false);
@@ -52,74 +61,58 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 
 	const fieldIndex = fields.indexOf(activeField);
 
-	useInput(
-		(input, key) => {
-			if (isEditing) return;
+	const cycle = (delta: number) => {
+		if (activeField === "status") {
+			const idx = statuses.indexOf(status);
+			setStatus(
+				statuses[(idx + delta + statuses.length) % statuses.length] ?? "todo",
+			);
+		} else if (activeField === "priority") {
+			const idx = priorities.indexOf(priority);
+			setPriority(
+				priorities[(idx + delta + priorities.length) % priorities.length] ??
+					"medium",
+			);
+		}
+	};
 
-			if (key.escape) {
-				onCancel();
-				return;
-			}
+	const save = () => {
+		const updates: TaskUpdates = {};
+		if (title !== task.title) updates.title = title;
+		if (description !== task.description) updates.description = description;
+		if (status !== task.status) updates.status = status;
+		if (priority !== task.priority) updates.priority = priority;
+		if (dueDate !== (task.due_date ?? "")) {
+			updates.due_date = dueDate || null;
+		}
+		if (tags !== originalTags) {
+			updates.tags = tags
+				.split(",")
+				.map((t) => t.trim())
+				.filter((t) => t.length > 0);
+		}
+		onSave(updates);
+	};
 
-			if (key.upArrow) {
-				setActiveField(fields[Math.max(0, fieldIndex - 1)] ?? "title");
-			} else if (key.downArrow) {
+	useKeys(
+		{
+			escape: onCancel,
+			up: () => setActiveField(fields[Math.max(0, fieldIndex - 1)] ?? "title"),
+			down: () =>
 				setActiveField(
 					fields[Math.min(fields.length - 1, fieldIndex + 1)] ?? "tags",
-				);
-			} else if (key.return) {
-				if (activeField === "status") {
-					const idx = statuses.indexOf(status);
-					setStatus(statuses[(idx + 1) % statuses.length] ?? "todo");
-				} else if (activeField === "priority") {
-					const idx = priorities.indexOf(priority);
-					setPriority(priorities[(idx + 1) % priorities.length] ?? "medium");
-				} else if (
-					activeField === "title" ||
-					activeField === "description" ||
-					activeField === "dueDate" ||
-					activeField === "tags"
-				) {
+				),
+			return: () => {
+				if (activeField === "status" || activeField === "priority") {
+					cycle(1);
+				} else {
 					setIsEditing(true);
 				}
-			} else if (key.leftArrow) {
-				if (activeField === "status") {
-					const idx = statuses.indexOf(status);
-					setStatus(
-						statuses[(idx - 1 + statuses.length) % statuses.length] ?? "todo",
-					);
-				} else if (activeField === "priority") {
-					const idx = priorities.indexOf(priority);
-					setPriority(
-						priorities[(idx - 1 + priorities.length) % priorities.length] ??
-							"medium",
-					);
-				}
-			} else if (key.rightArrow) {
-				if (activeField === "status") {
-					const idx = statuses.indexOf(status);
-					setStatus(statuses[(idx + 1) % statuses.length] ?? "todo");
-				} else if (activeField === "priority") {
-					const idx = priorities.indexOf(priority);
-					setPriority(priorities[(idx + 1) % priorities.length] ?? "medium");
-				}
-			} else if (input === "s" || input === "S") {
-				const updates: TaskUpdates = {};
-				if (title !== task.title) updates.title = title;
-				if (description !== task.description) updates.description = description;
-				if (status !== task.status) updates.status = status;
-				if (priority !== task.priority) updates.priority = priority;
-				if (dueDate !== (task.due_date ?? "")) {
-					updates.due_date = dueDate || null;
-				}
-				if (tags !== originalTags) {
-					updates.tags = tags
-						.split(",")
-						.map((t) => t.trim())
-						.filter((t) => t.length > 0);
-				}
-				onSave(updates);
-			}
+			},
+			left: () => cycle(-1),
+			right: () => cycle(1),
+			s: save,
+			S: save,
 		},
 		{ isActive: !isEditing },
 	);
@@ -152,7 +145,7 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 				break;
 			case "description":
 				display = (
-					<Text dimColor={!description}>
+					<Text attributes={attrs({ dim: !description })}>
 						{description
 							? description.length > 40
 								? `${description.slice(0, 40)}...`
@@ -163,56 +156,48 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 				break;
 			case "status":
 				display = (
-					<Box gap={1}>
+					<box flexDirection="row" gap={1}>
 						{statuses.map((s) => (
 							<Text
 								key={s}
-								inverse={s === status}
-								color={s === status ? "cyan" : undefined}
-								dimColor={s !== status}
+								attributes={attrs({ dim: s !== status })}
+								{...selection(s === status, "cyan")}
 							>
 								{" "}
 								{s.toUpperCase()}{" "}
 							</Text>
 						))}
-					</Box>
+					</box>
 				);
 				break;
 			case "priority":
 				display = (
-					<Box gap={1}>
+					<box flexDirection="row" gap={1}>
 						{priorities.map((p) => (
 							<Text
 								key={p}
-								inverse={p === priority}
-								color={
-									p === priority
-										? p === "urgent"
-											? "red"
-											: p === "high"
-												? "yellow"
-												: p === "low"
-													? "gray"
-													: "cyan"
-										: undefined
-								}
-								dimColor={p !== priority}
+								attributes={attrs({ dim: p !== priority })}
+								{...selection(p === priority, priorityColors[p])}
 							>
 								{" "}
 								{p.toUpperCase()}{" "}
 							</Text>
 						))}
-					</Box>
+					</box>
 				);
 				break;
 			case "dueDate":
 				display = (
-					<Text dimColor={!dueDate}>{dueDate || "(none) YYYY-MM-DD"}</Text>
+					<Text attributes={attrs({ dim: !dueDate })}>
+						{dueDate || "(none) YYYY-MM-DD"}
+					</Text>
 				);
 				break;
 			case "tags":
 				display = (
-					<Text dimColor={!tags}>{tags || "(none) comma-separated"}</Text>
+					<Text attributes={attrs({ dim: !tags })}>
+						{tags || "(none) comma-separated"}
+					</Text>
 				);
 				break;
 		}
@@ -235,10 +220,10 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 				field === "tags")
 		) {
 			return (
-				<Box key={field}>
-					<Box width={labelWidth}>
-						<Text color="cyan">{labels[field]}:</Text>
-					</Box>
+				<box key={field} flexDirection="row">
+					<box width={labelWidth}>
+						<Text fg={inkColor("cyan")}>{labels[field]}:</Text>
+					</box>
 					<Input
 						value={getFieldValue()}
 						onChange={(v) => {
@@ -257,33 +242,42 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 									: undefined
 						}
 					/>
-				</Box>
+				</box>
 			);
 		}
 
 		return (
-			<Box key={field}>
-				<Box width={labelWidth}>
-					<Text color={isActive ? "cyan" : undefined} bold={isActive}>
+			<box key={field} flexDirection="row">
+				<box width={labelWidth}>
+					<Text
+						fg={isActive ? inkColor("cyan") : undefined}
+						attributes={attrs({ bold: isActive })}
+					>
 						{labels[field]}:
 					</Text>
-				</Box>
-				<Text inverse={isActive && !isEditing}>{isActive ? " " : ""}</Text>
+				</box>
+				<Text {...selection(isActive && !isEditing)}>
+					{isActive ? " " : ""}
+				</Text>
 				{display}
-				<Text inverse={isActive && !isEditing}>{isActive ? " " : ""}</Text>
-			</Box>
+				<Text {...selection(isActive && !isEditing)}>
+					{isActive ? " " : ""}
+				</Text>
+			</box>
 		);
 	};
 
 	return (
 		<Modal title="Edit Task">
-			<Box flexDirection="column" gap={1}>
+			<box flexDirection="column" gap={1}>
 				{fields.map(renderField)}
-			</Box>
-			<Box marginTop={1} flexDirection="column">
-				<Text dimColor>↑/↓ Navigate • Enter Edit • ←/→ Cycle options</Text>
-				<Text dimColor>S Save • Esc Cancel</Text>
-			</Box>
+			</box>
+			<box marginTop={1} flexDirection="column">
+				<Text attributes={DIM}>
+					↑/↓ Navigate • Enter Edit • ←/→ Cycle options
+				</Text>
+				<Text attributes={DIM}>S Save • Esc Cancel</Text>
+			</box>
 		</Modal>
 	);
 }

@@ -10,6 +10,7 @@ const DEFAULT_TOML = `# Todosh Configuration
 
 [ui]
 theme = "default"
+appearance = "auto"  # "auto", "dark" or "light" (auto detects the terminal background)
 useNerdfonts = true
 showArchived = false
 
@@ -85,6 +86,7 @@ ${settings.defaultBoard ? `defaultBoard = ${settings.defaultBoard}` : "# default
 
 [ui]
 theme = "${settings.ui.theme}"
+appearance = "${settings.ui.appearance}"
 useNerdfonts = ${settings.ui.useNerdfonts}
 showArchived = ${settings.ui.showArchived}
 

@@ -5,11 +5,12 @@ import {
 	Input,
 	Modal,
 	type TaskUpdates,
+	Text,
 } from "@components/common";
 import { Shell } from "@components/layout";
 import { FilterMenu, SearchBar } from "@components/search";
 import {
-	getTerminalSize,
+	KeymapPriority,
 	useBoards,
 	useFilter,
 	useKeymap,
@@ -19,7 +20,7 @@ import {
 } from "@hooks";
 import { useTasks } from "@hooks/useTasks";
 import type { TaskStatus, TaskWithTags } from "@types";
-import { Box, Text, useStdout } from "ink";
+import { attrs, DIM, inkColor, selection } from "@utils";
 import { useEffect, useMemo, useState } from "react";
 
 interface BoardViewProps {
@@ -50,8 +51,6 @@ const boardHints = [
 ];
 
 export function BoardView({ boardId }: BoardViewProps) {
-	const { stdout } = useStdout();
-	const { rows } = getTerminalSize(stdout);
 	const { getBoard } = useBoards();
 	const {
 		tasks,
@@ -278,7 +277,7 @@ export function BoardView({ boardId }: BoardViewProps) {
 				breadcrumbs={["Boards", "???"]}
 				hints={boardHints}
 			>
-				<Text color="red">Board not found</Text>
+				<Text fg={inkColor("red")}>Board not found</Text>
 			</Shell>
 		);
 	}
@@ -295,9 +294,6 @@ export function BoardView({ boardId }: BoardViewProps) {
 		);
 	}
 
-	const searchBarHeight = isSearching ? 3 : 0;
-	const filterMenuHeight = isFiltering ? 5 : 0;
-	const columnHeight = rows - 6 - searchBarHeight - filterMenuHeight;
 	const columnWidth = Math.floor((80 - 6) / 3);
 
 	return (
@@ -328,15 +324,15 @@ export function BoardView({ boardId }: BoardViewProps) {
 			)}
 
 			{!isSearching && !isFiltering && (query || hasActiveFilters) && (
-				<Box marginBottom={1} gap={2}>
-					{query && <Text dimColor>Search: "{query}"</Text>}
+				<box flexDirection="row" marginBottom={1} gap={2}>
+					{query && <Text attributes={DIM}>Search: "{query}"</Text>}
 					{hasActiveFilters && (
-						<Text dimColor>Filters active (Esc to clear)</Text>
+						<Text attributes={DIM}>Filters active (Esc to clear)</Text>
 					)}
-				</Box>
+				</box>
 			)}
 
-			<Box gap={1}>
+			<box flexDirection="row" gap={1} flexGrow={1} flexBasis={0}>
 				{statuses.map((status, columnIndex) => (
 					<Column
 						key={status}
@@ -346,10 +342,9 @@ export function BoardView({ boardId }: BoardViewProps) {
 						isFocused={focusedColumn === columnIndex && !isInputActive}
 						useNerdfonts={settings.ui.useNerdfonts}
 						width={columnWidth}
-						height={columnHeight}
 					/>
 				))}
-			</Box>
+			</box>
 
 			{modal.type === "create" && (
 				<Modal title={`New Task (${currentStatus.toUpperCase()})`}>
@@ -361,9 +356,9 @@ export function BoardView({ boardId }: BoardViewProps) {
 						onCancel={() => setModal({ type: "none" })}
 						placeholder="Enter task title..."
 					/>
-					<Box marginTop={1}>
-						<Text dimColor>Enter to create • Esc to cancel</Text>
-					</Box>
+					<box marginTop={1}>
+						<Text attributes={DIM}>Enter to create • Esc to cancel</Text>
+					</box>
 				</Modal>
 			)}
 
@@ -419,6 +414,7 @@ function MoveModal({ task, onMove, onCancel }: MoveModalProps) {
 	);
 
 	useKeymap({
+		priority: KeymapPriority.overlay,
 		handlers: {
 			onLeft: () => setSelected((s) => Math.max(0, s - 1)),
 			onRight: () => setSelected((s) => Math.min(2, s + 1)),
@@ -437,29 +433,25 @@ function MoveModal({ task, onMove, onCancel }: MoveModalProps) {
 	return (
 		<Modal title="Move Task">
 			<Text>Move "{task.title}" to:</Text>
-			<Box marginTop={1} gap={2}>
+			<box flexDirection="row" marginTop={1} gap={2}>
 				{statuses.map((status, i) => (
-					<Box key={status}>
+					<box key={status} flexDirection="row">
 						<Text
-							inverse={selected === i}
-							color={
-								status === task.status
-									? "gray"
-									: selected === i
-										? "cyan"
-										: undefined
-							}
-							dimColor={status === task.status}
+							attributes={attrs({ dim: status === task.status })}
+							fg={status === task.status ? inkColor("gray") : undefined}
+							{...selection(selected === i, "cyan")}
 						>
 							{" "}
 							{status.toUpperCase()}{" "}
 						</Text>
-					</Box>
+					</box>
 				))}
-			</Box>
-			<Box marginTop={1}>
-				<Text dimColor>←/→ to select • Enter to move • Esc to cancel</Text>
-			</Box>
+			</box>
+			<box marginTop={1}>
+				<Text attributes={DIM}>
+					←/→ to select • Enter to move • Esc to cancel
+				</Text>
+			</box>
 		</Modal>
 	);
 }
