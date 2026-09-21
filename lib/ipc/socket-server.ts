@@ -1,5 +1,7 @@
 import { existsSync, unlinkSync } from "node:fs";
+
 import { getSocketPath } from "@utils/paths";
+
 import { handleRequest } from "./handlers";
 import { error, formatResponse, parseRequest } from "./protocol";
 

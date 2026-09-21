@@ -1,5 +1,6 @@
 import { BOLD, defaultBackground, inkColor } from "@utils";
 import type { ReactNode } from "react";
+
 import { Text } from "./text";
 
 interface ModalProps {

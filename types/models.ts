@@ -2,6 +2,14 @@ export type TaskStatus = "todo" | "doing" | "done";
 export type Priority = "low" | "medium" | "high" | "urgent";
 
 export interface Board {
+	project_filter_id: string | null;
+	project_filter_name: string | null;
+	/** Cached name of the linked Linear project; null for local or team-wide boards. */
+	project: string | null;
+	source: "local" | "linear";
+	linear_team_id: string | null;
+	linear_project_id: string | null;
+	linear_org_id: string | null;
 	id: number;
 	name: string;
 	description: string;
@@ -11,6 +19,10 @@ export interface Board {
 }
 
 export interface Task {
+	linear_project_id: string | null;
+	linear_issue_id: string | null;
+	linear_identifier: string | null;
+	linear_url: string | null;
 	id: number;
 	board_id: number;
 	title: string;

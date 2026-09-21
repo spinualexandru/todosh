@@ -7,6 +7,7 @@ import {
 	type TaskUpdates,
 	Text,
 } from "@components/common";
+import { ChangeProjectModal } from "@components/common/change-project-modal";
 import { Shell } from "@components/layout";
 import { FilterMenu, SearchBar } from "@components/search";
 import {
@@ -17,10 +18,13 @@ import {
 	useRouter,
 	useSearch,
 	useSettings,
+	useTerminalSize,
 } from "@hooks";
+import { useKeys } from "@hooks/useKeys";
 import { useTasks } from "@hooks/useTasks";
 import type { TaskStatus, TaskWithTags } from "@types";
 import { attrs, DIM, inkColor, selection } from "@utils";
+import { boardProject } from "@utils/board-project";
 import { useEffect, useMemo, useState } from "react";
 
 interface BoardViewProps {
@@ -29,6 +33,7 @@ interface BoardViewProps {
 
 type ModalState =
 	| { type: "none" }
+	| { type: "project" }
 	| { type: "create" }
 	| { type: "edit"; task: TaskWithTags }
 	| { type: "delete"; task: TaskWithTags }
@@ -51,10 +56,14 @@ const boardHints = [
 ];
 
 export function BoardView({ boardId }: BoardViewProps) {
+	const { columns } = useTerminalSize();
 	const { getBoard } = useBoards();
 	const {
 		tasks,
 		isLoading,
+		error,
+		isSyncing,
+		refresh,
 		createTask,
 		updateTask,
 		deleteTask,
@@ -122,6 +131,18 @@ export function BoardView({ boardId }: BoardViewProps) {
 
 	const isModalOpen = modal.type !== "none";
 	const isInputActive = isSearching || isFiltering || isModalOpen;
+	useKeys(
+		{
+			c:
+				board?.source === "linear"
+					? () => setModal({ type: "project" })
+					: undefined,
+			r: () => {
+				void refresh();
+			},
+		},
+		{ isActive: !isInputActive },
+	);
 	const currentStatus = statuses[focusedColumn] ?? "todo";
 	const currentTasks = tasksByStatus[currentStatus];
 	const currentIndex = selectedIndices[currentStatus];
@@ -216,23 +237,24 @@ export function BoardView({ boardId }: BoardViewProps) {
 		},
 	});
 
-	const handleCreateSubmit = (title: string) => {
+	const handleCreateSubmit = async (title: string) => {
 		if (title.trim()) {
-			createTask({
+			const created = await createTask({
 				board_id: boardId,
 				title: title.trim(),
 				status: currentStatus,
 			});
+			if (!created) return;
 		}
 		setModal({ type: "none" });
 		setInputValue("");
 	};
 
-	const handleEditSubmit = (updates: TaskUpdates) => {
+	const handleEditSubmit = async (updates: TaskUpdates) => {
 		if (modal.type === "edit") {
 			const { tags, ...taskUpdates } = updates;
 			if (Object.keys(taskUpdates).length > 0) {
-				updateTask(modal.task.id, taskUpdates);
+				if (!(await updateTask(modal.task.id, taskUpdates))) return;
 			}
 			if (tags) {
 				setTaskTags(modal.task.id, tags);
@@ -294,7 +316,10 @@ export function BoardView({ boardId }: BoardViewProps) {
 		);
 	}
 
-	const columnWidth = Math.floor((80 - 6) / 3);
+	// Shell borders/padding take four cells; the two column gaps take two.
+	const availableWidth = columns - 6;
+	const columnWidth = Math.floor(availableWidth / statuses.length);
+	const extraCells = availableWidth % statuses.length;
 
 	return (
 		<Shell
@@ -302,6 +327,18 @@ export function BoardView({ boardId }: BoardViewProps) {
 			breadcrumbs={["Boards", board.name]}
 			hints={boardHints}
 		>
+			<Text attributes={DIM}>
+				Project: {boardProject(board)}
+				{board.source === "linear" ? " • c to change" : ""}
+			</Text>
+			{board.source === "linear" && (
+				<Text attributes={DIM}>
+					{isSyncing
+						? "Syncing Linear…"
+						: "Linear • r to refresh • tags are local"}
+				</Text>
+			)}
+			{error && <Text fg={inkColor("red")}>{error}</Text>}
 			{isSearching && (
 				<SearchBar
 					value={query}
@@ -341,18 +378,30 @@ export function BoardView({ boardId }: BoardViewProps) {
 						selectedIndex={selectedIndices[status]}
 						isFocused={focusedColumn === columnIndex && !isInputActive}
 						useNerdfonts={settings.ui.useNerdfonts}
-						width={columnWidth}
+						width={columnWidth + (columnIndex < extraCells ? 1 : 0)}
 					/>
 				))}
 			</box>
 
+			{modal.type === "project" && (
+				<ChangeProjectModal
+					board={board}
+					onClose={() => {
+						setModal({ type: "none" });
+					}}
+				/>
+			)}
+
 			{modal.type === "create" && (
 				<Modal title={`New Task (${currentStatus.toUpperCase()})`}>
+					{error && <Text fg={inkColor("red")}>{error}</Text>}
 					<Input
 						label="Title"
 						value={inputValue}
 						onChange={setInputValue}
-						onSubmit={handleCreateSubmit}
+						onSubmit={(title) => {
+							if (!isSyncing) void handleCreateSubmit(title);
+						}}
 						onCancel={() => setModal({ type: "none" })}
 						placeholder="Enter task title..."
 					/>
@@ -364,8 +413,12 @@ export function BoardView({ boardId }: BoardViewProps) {
 
 			{modal.type === "edit" && (
 				<EditTaskModal
+					error={error}
+					busy={isSyncing}
 					task={modal.task}
-					onSave={handleEditSubmit}
+					onSave={(updates) => {
+						if (!isSyncing) void handleEditSubmit(updates);
+					}}
 					onCancel={() => setModal({ type: "none" })}
 				/>
 			)}

@@ -1,5 +1,6 @@
 import type { Comment } from "@types";
 import { useCallback, useEffect, useState } from "react";
+
 import { useDatabase } from "./useDatabase";
 
 export function useComments(taskId: number) {

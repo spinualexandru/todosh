@@ -1,6 +1,7 @@
 import { useEscapeKey, useInputFocus } from "@hooks";
 import type { InputProps as OpenTuiInputProps } from "@opentui/react";
 import { BOLD, DIM, inkColor } from "@utils";
+
 import { Text } from "./text";
 
 /**

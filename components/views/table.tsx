@@ -6,6 +6,7 @@ import {
 	type TaskUpdates,
 	Text,
 } from "@components/common";
+import { ChangeProjectModal } from "@components/common/change-project-modal";
 import { Shell } from "@components/layout";
 import { FilterMenu, SearchBar } from "@components/search";
 import { type ColumnConfig, TableHeader, TableRow } from "@components/table";
@@ -20,10 +21,12 @@ import {
 	useSettings,
 	useTerminalSize,
 } from "@hooks";
+import { useKeys } from "@hooks/useKeys";
 import { useTasks } from "@hooks/useTasks";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { TaskStatus, TaskWithTags } from "@types";
 import { attrs, DIM, inkColor, selection } from "@utils";
+import { boardProject } from "@utils/board-project";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface TableViewProps {
@@ -32,6 +35,7 @@ interface TableViewProps {
 
 type ModalState =
 	| { type: "none" }
+	| { type: "project" }
 	| { type: "create" }
 	| { type: "edit"; task: TaskWithTags }
 	| { type: "delete"; task: TaskWithTags }
@@ -59,6 +63,9 @@ export function TableView({ boardId }: TableViewProps) {
 	const {
 		tasks,
 		isLoading,
+		error,
+		isSyncing,
+		refresh,
 		createTask,
 		updateTask,
 		deleteTask,
@@ -104,6 +111,18 @@ export function TableView({ boardId }: TableViewProps) {
 
 	const isModalOpen = modal.type !== "none";
 	const isInputActive = isSearching || isFiltering || isModalOpen;
+	useKeys(
+		{
+			c:
+				board?.source === "linear"
+					? () => setModal({ type: "project" })
+					: undefined,
+			r: () => {
+				void refresh();
+			},
+		},
+		{ isActive: !isInputActive },
+	);
 	const selectedTask = filteredTasks[selectedIndex];
 
 	const scrollRef = useRef<ScrollBoxRenderable>(null);
@@ -176,23 +195,24 @@ export function TableView({ boardId }: TableViewProps) {
 		},
 	});
 
-	const handleCreateSubmit = (title: string) => {
+	const handleCreateSubmit = async (title: string) => {
 		if (title.trim()) {
-			createTask({
+			const created = await createTask({
 				board_id: boardId,
 				title: title.trim(),
 				status: "todo",
 			});
+			if (!created) return;
 		}
 		setModal({ type: "none" });
 		setInputValue("");
 	};
 
-	const handleEditSubmit = (updates: TaskUpdates) => {
+	const handleEditSubmit = async (updates: TaskUpdates) => {
 		if (modal.type === "edit") {
 			const { tags, ...taskUpdates } = updates;
 			if (Object.keys(taskUpdates).length > 0) {
-				updateTask(modal.task.id, taskUpdates);
+				if (!(await updateTask(modal.task.id, taskUpdates))) return;
 			}
 			if (tags) {
 				setTaskTags(modal.task.id, tags);
@@ -254,6 +274,18 @@ export function TableView({ boardId }: TableViewProps) {
 			breadcrumbs={["Boards", board.name, "Table"]}
 			hints={tableHints}
 		>
+			<Text attributes={DIM}>
+				Project: {boardProject(board)}
+				{board.source === "linear" ? " • c to change" : ""}
+			</Text>
+			{board.source === "linear" && (
+				<Text attributes={DIM}>
+					{isSyncing
+						? "Syncing Linear…"
+						: "Linear • r to refresh • tags are local"}
+				</Text>
+			)}
+			{error && <Text fg={inkColor("red")}>{error}</Text>}
 			{isSearching && (
 				<SearchBar
 					value={query}
@@ -323,13 +355,25 @@ export function TableView({ boardId }: TableViewProps) {
 				</box>
 			)}
 
+			{modal.type === "project" && (
+				<ChangeProjectModal
+					board={board}
+					onClose={() => {
+						setModal({ type: "none" });
+					}}
+				/>
+			)}
+
 			{modal.type === "create" && (
 				<Modal title="New Task">
+					{error && <Text fg={inkColor("red")}>{error}</Text>}
 					<Input
 						label="Title"
 						value={inputValue}
 						onChange={setInputValue}
-						onSubmit={handleCreateSubmit}
+						onSubmit={(title) => {
+							if (!isSyncing) void handleCreateSubmit(title);
+						}}
 						onCancel={() => setModal({ type: "none" })}
 						placeholder="Enter task title..."
 					/>
@@ -341,8 +385,12 @@ export function TableView({ boardId }: TableViewProps) {
 
 			{modal.type === "edit" && (
 				<EditTaskModal
+					error={error}
+					busy={isSyncing}
 					task={modal.task}
-					onSave={handleEditSubmit}
+					onSave={(updates) => {
+						if (!isSyncing) void handleEditSubmit(updates);
+					}}
 					onCancel={() => setModal({ type: "none" })}
 				/>
 			)}

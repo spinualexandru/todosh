@@ -1,6 +1,7 @@
 import { Text } from "@components/common";
 import type { TaskStatus, TaskWithTags } from "@types";
 import { BOLD, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
+
 import { CardList } from "./card-list";
 
 interface ColumnProps {
@@ -70,7 +71,7 @@ export function Column({
 					selectedIndex={selectedIndex}
 					isFocused={isFocused}
 					useNerdfonts={useNerdfonts}
-					width={width - 4}
+					width={Math.max(1, width - 4)}
 				/>
 			</box>
 		</box>

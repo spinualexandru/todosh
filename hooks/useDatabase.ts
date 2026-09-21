@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+
 import { DatabaseContext } from "@contexts/database";
 import { useContext } from "react";
 

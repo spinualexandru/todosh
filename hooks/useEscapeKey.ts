@@ -1,5 +1,6 @@
 import { useBindings } from "@opentui/keymap/react";
 import { useRef } from "react";
+
 import { KeymapPriority } from "./useKeymap";
 
 /**

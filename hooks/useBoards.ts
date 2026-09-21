@@ -1,5 +1,6 @@
 import type { Board, BoardWithStats } from "@types";
 import { useCallback, useEffect, useState } from "react";
+
 import { useDatabase } from "./useDatabase";
 
 interface CreateBoardInput {
@@ -27,6 +28,7 @@ export function useBoards() {
 				SUM(CASE WHEN t.status = 'done' AND t.archived = 0 THEN 1 ELSE 0 END) as doneCount
 			FROM boards b
 			LEFT JOIN tasks t ON t.board_id = b.id
+ AND (b.source != 'linear' OR b.project_filter_id IS NULL OR t.linear_project_id=b.project_filter_id)
 			WHERE b.archived = 0
 			GROUP BY b.id
 			ORDER BY b.updated_at DESC

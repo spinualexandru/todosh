@@ -1,8 +1,22 @@
 #!/usr/bin/env bun
+
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+
 import { getDatabase } from "@lib/db/connection";
-import type { Board, Task } from "@types";
+import {
+	connectBoard,
+	createLinearTask,
+	deleteLinearTask,
+	linearError,
+	linkedBoard,
+	listTeams,
+	syncBoard,
+	updateLinearTask,
+} from "@lib/linear";
+import { linearCredentials } from "@lib/linear/credentials";
+import type { Board, Priority, Task, TaskStatus } from "@types";
+import { boardProject } from "@utils/board-project";
 
 function detectShell(): string | null {
 	const shell = process.env.SHELL;
@@ -27,6 +41,10 @@ Usage:
 Commands:
   boards                      List all boards
   board:create <name>         Create a new board
+  linear:logout               Remove the saved Linear API key
+  linear:teams                List accessible Linear teams
+  board:connect <team-id> [project-id]  Connect a Linear board
+  board:sync <id>              Refresh a connected board
   board:delete <id>           Delete a board
 
   list [options]              List tasks
@@ -90,6 +108,34 @@ async function main(): Promise<void> {
 	const db = getDatabase();
 
 	switch (command) {
+		case "linear:logout": {
+			await linearCredentials.remove();
+			console.log("Removed saved Linear API key. Cached boards are unchanged.");
+			break;
+		}
+		case "linear:teams": {
+			for (const team of await listTeams())
+				console.log(`${team.id}  ${team.name} (${team.key})`);
+			break;
+		}
+		case "board:connect": {
+			if (!args[1])
+				throw new Error(
+					"Team ID required: todosh board:connect <team-id> [project-id]",
+				);
+			const board = await connectBoard(db, args[1], args[2]);
+			console.log(`Connected "${board.name}" (ID: ${board.id})`);
+			break;
+		}
+		case "board:sync": {
+			const id = Number(args[1]);
+			if (!linkedBoard(db, id))
+				throw new Error("Connected Linear board ID required");
+			await syncBoard(db, id);
+			console.log("Synced Linear board");
+			break;
+		}
+
 		case "boards": {
 			const boards = db
 				.query<Board, []>(
@@ -110,7 +156,7 @@ async function main(): Promise<void> {
 					)
 					.get(board.id);
 				console.log(
-					`  [${board.id}] ${board.name} (${taskCount?.count ?? 0} tasks)`,
+					`  [${board.id}] ${board.name} (${taskCount?.count ?? 0} tasks) — Project: ${boardProject(board)}`,
 				);
 			}
 			break;
@@ -156,7 +202,7 @@ async function main(): Promise<void> {
 			const params: (number | string)[] = [];
 
 			if (opts.b || opts.board) {
-				const boardId = Number.parseInt(opts.b || opts.board, 10);
+				const boardId = Number.parseInt(opts.b || opts.board || "", 10);
 				if (!Number.isNaN(boardId)) {
 					query += " AND board_id = ?";
 					params.push(boardId);
@@ -165,7 +211,7 @@ async function main(): Promise<void> {
 			if (opts.s || opts.status) {
 				const status = opts.s || opts.status;
 				query += " AND status = ?";
-				params.push(status);
+				params.push(status ?? "");
 			}
 			query += " ORDER BY board_id, status, position";
 
@@ -228,6 +274,19 @@ async function main(): Promise<void> {
 
 			const priority = opts.p || opts.priority || "medium";
 			const description = opts.d || opts.description || "";
+			if (board.source === "linear") {
+				if (!["low", "medium", "high", "urgent"].includes(priority))
+					throw new Error("Invalid priority");
+				const task = await createLinearTask(db, board, {
+					title,
+					description,
+					priority: priority as Priority,
+				});
+				console.log(
+					`Created ${task.linear_identifier}: ${task.title} (ID: ${task.id})`,
+				);
+				break;
+			}
 
 			const maxPos = db
 				.query<{ max: number | null }, [number]>(
@@ -262,6 +321,8 @@ async function main(): Promise<void> {
 				console.error(`Error: Task not found: ${id}`);
 				process.exit(1);
 			}
+			if (linkedBoard(db, task.board_id))
+				await updateLinearTask(db, task, { status: command as TaskStatus });
 			db.query(
 				"UPDATE tasks SET status = ?, updated_at = datetime('now') WHERE id = ?",
 			).run(command, id);
@@ -287,6 +348,8 @@ async function main(): Promise<void> {
 				console.error(`Error: Task not found: ${id}`);
 				process.exit(1);
 			}
+			if (linkedBoard(db, task.board_id))
+				await updateLinearTask(db, task, { status: status as TaskStatus });
 			db.query(
 				"UPDATE tasks SET status = ?, updated_at = datetime('now') WHERE id = ?",
 			).run(status, id);
@@ -307,6 +370,7 @@ async function main(): Promise<void> {
 				console.error(`Error: Task not found: ${id}`);
 				process.exit(1);
 			}
+			if (linkedBoard(db, task.board_id)) await deleteLinearTask(db, task);
 			db.query("DELETE FROM tasks WHERE id = ?").run(id);
 			console.log(`Deleted task "${task.title}"`);
 			break;
@@ -325,6 +389,8 @@ async function main(): Promise<void> {
 				console.error(`Error: Task not found: ${id}`);
 				process.exit(1);
 			}
+			if (linkedBoard(db, task.board_id))
+				await updateLinearTask(db, task, { archived: true });
 			db.query(
 				"UPDATE tasks SET archived = 1, updated_at = datetime('now') WHERE id = ?",
 			).run(id);
@@ -419,6 +485,15 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-	console.error("Error:", err.message);
+	console.error(
+		"Error:",
+		err?.request ||
+			err?.response ||
+			command?.startsWith("linear:") ||
+			command === "board:connect" ||
+			command === "board:sync"
+			? linearError(err)
+			: err.message,
+	);
 	process.exit(1);
 });

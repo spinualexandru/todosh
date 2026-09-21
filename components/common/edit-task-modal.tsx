@@ -2,12 +2,15 @@ import { useKeys } from "@hooks";
 import type { Priority, TaskStatus, TaskWithTags } from "@types";
 import { attrs, DIM, inkColor, selection } from "@utils";
 import { useState } from "react";
+
 import { Input } from "./input";
 import { Modal } from "./modal";
 import { Text } from "./text";
 
 interface EditTaskModalProps {
 	task: TaskWithTags;
+	error?: string;
+	busy?: boolean;
 	onSave: (updates: TaskUpdates) => void;
 	onCancel: () => void;
 }
@@ -47,7 +50,13 @@ const priorityColors: Record<Priority, string> = {
 	medium: "cyan",
 };
 
-export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
+export function EditTaskModal({
+	task,
+	onSave,
+	onCancel,
+	error,
+	busy,
+}: EditTaskModalProps) {
 	const [activeField, setActiveField] = useState<EditField>("title");
 	const [isEditing, setIsEditing] = useState(false);
 
@@ -77,6 +86,7 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 	};
 
 	const save = () => {
+		if (busy) return;
 		const updates: TaskUpdates = {};
 		if (title !== task.title) updates.title = title;
 		if (description !== task.description) updates.description = description;
@@ -269,6 +279,8 @@ export function EditTaskModal({ task, onSave, onCancel }: EditTaskModalProps) {
 
 	return (
 		<Modal title="Edit Task">
+			{error && <Text fg={inkColor("red")}>{error}</Text>}
+			{busy && <Text attributes={DIM}>Saving…</Text>}
 			<box flexDirection="column" gap={1}>
 				{fields.map(renderField)}
 			</box>

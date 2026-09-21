@@ -30,7 +30,7 @@ export function Card({
 	const icons = useNerdfonts ? glyphs : fallbackGlyphs;
 	const priorityColor = priorityColors[task.priority] ?? "white";
 
-	const maxTitleLen = width - 6;
+	const maxTitleLen = Math.max(1, width - 6);
 	const displayTitle =
 		task.title.length > maxTitleLen
 			? `${task.title.slice(0, maxTitleLen - 1)}…`

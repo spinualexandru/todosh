@@ -1,6 +1,7 @@
 import { Text } from "@components/common";
 import type { TaskWithTags } from "@types";
 import { attrs, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
+
 import type { ColumnConfig } from "./table-header";
 
 interface TableRowProps {

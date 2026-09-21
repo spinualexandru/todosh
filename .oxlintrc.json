@@ -1,0 +1,69 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "react", "oxc"],
+	"categories": {
+		"correctness": "error"
+	},
+	"env": {
+		"builtin": true,
+		"node": true,
+		"bun": true
+	},
+	"ignorePatterns": ["node_modules/**", "dist/**", "out/**", "coverage/**"],
+	"rules": {
+		"no-debugger": "error",
+		"no-unused-vars": [
+			"error",
+			{
+				"args": "all",
+				"argsIgnorePattern": "^_",
+				"varsIgnorePattern": "^_",
+				"caughtErrorsIgnorePattern": "^_",
+				"ignoreRestSiblings": true
+			}
+		],
+		"eqeqeq": [
+			"error",
+			"always",
+			{
+				"null": "ignore"
+			}
+		],
+		"typescript/consistent-type-imports": [
+			"error",
+			{
+				"prefer": "type-imports",
+				"fixStyle": "inline-type-imports"
+			}
+		],
+		"react/rules-of-hooks": "error",
+		"react/exhaustive-deps": "error",
+		"react/jsx-key": "error",
+		"react/jsx-no-duplicate-props": "error"
+	},
+	"overrides": [
+		{
+			"files": [
+				"hooks/useEscapeKey.ts",
+				"hooks/useKeys.ts",
+				"hooks/useKeymap.ts"
+			],
+			"rules": {
+				"react/refs": "off"
+			}
+		},
+		{
+			"files": [
+				"hooks/useBoards.ts",
+				"hooks/useComments.ts",
+				"hooks/useTasks.ts",
+				"components/views/board.tsx",
+				"components/views/dashboard.tsx",
+				"components/views/table.tsx"
+			],
+			"rules": {
+				"react/set-state-in-effect": "off"
+			}
+		}
+	]
+}

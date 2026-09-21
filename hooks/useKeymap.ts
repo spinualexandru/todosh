@@ -2,6 +2,7 @@ import { InputFocusContext } from "@contexts/input-focus";
 import { useBindings } from "@opentui/keymap/react";
 import type { KeybindMode } from "@types";
 import { useContext, useMemo, useRef } from "react";
+
 import { useSettings } from "./useSettings";
 
 type Action =

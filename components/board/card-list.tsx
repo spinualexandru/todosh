@@ -4,6 +4,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import type { TaskWithTags } from "@types";
 import { DIM, inkColor } from "@utils";
 import { useRef } from "react";
+
 import { Card } from "./card";
 
 interface CardListProps {

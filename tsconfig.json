@@ -1,11 +1,11 @@
 {
 	"compilerOptions": {
 		// Environment setup & latest features
+		"types": ["bun"],
 		"lib": ["ESNext", "DOM"],
 		"target": "ESNext",
 		"module": "Preserve",
 		"moduleDetection": "force",
-		"baseUrl": "./",
 		"jsx": "react-jsx",
 		"jsxImportSource": "@opentui/react",
 		"allowJs": true,
@@ -28,18 +28,18 @@
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false,
 		"paths": {
-			"@hooks/*": ["hooks/*"],
-			"@hooks": ["hooks/index.ts"],
-			"@components/*": ["components/*"],
-			"@components": ["components/index.ts"],
-			"@utils/*": ["utils/*"],
-			"@utils": ["utils/index.ts"],
-			"@lib/*": ["lib/*"],
-			"@lib": ["lib/index.ts"],
-			"@types": ["types/index.ts"],
-			"@types/*": ["types/*"],
-			"@contexts/*": ["contexts/*"],
-			"@contexts": ["contexts/index.ts"]
+			"@hooks/*": ["./hooks/*"],
+			"@hooks": ["./hooks/index.ts"],
+			"@components/*": ["./components/*"],
+			"@components": ["./components/index.ts"],
+			"@utils/*": ["./utils/*"],
+			"@utils": ["./utils/index.ts"],
+			"@lib/*": ["./lib/*"],
+			"@lib": ["./lib/index.ts"],
+			"@types": ["./types/index.ts"],
+			"@types/*": ["./types/*"],
+			"@contexts/*": ["./contexts/*"],
+			"@contexts": ["./contexts/index.ts"]
 		}
 	}
 }

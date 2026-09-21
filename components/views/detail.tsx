@@ -13,6 +13,7 @@ import { useComments } from "@hooks/useComments";
 import { useTasks } from "@hooks/useTasks";
 import type { Priority, TaskStatus } from "@types";
 import { DIM, inkColor, selection } from "@utils";
+import { boardProject } from "@utils/board-project";
 import { useState } from "react";
 
 interface DetailViewProps {
@@ -43,7 +44,7 @@ const detailHints = [
 export function DetailView({ boardId, taskId }: DetailViewProps) {
 	const { columns, rows } = useTerminalSize();
 	const { getBoard } = useBoards();
-	const { getTask, updateTask } = useTasks(boardId);
+	const { getTask, updateTask, error, isSyncing } = useTasks(boardId);
 	const { comments, addComment } = useComments(taskId);
 	const { goBack } = useRouter();
 	const { settings } = useSettings();
@@ -109,9 +110,10 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 		setInputValue("");
 	};
 
-	const handleEditDescription = (content: string) => {
+	const handleEditDescription = async (content: string) => {
+		if (isSyncing) return;
 		if (task) {
-			updateTask(task.id, { description: content });
+			if (!(await updateTask(task.id, { description: content }))) return;
 		}
 		setModal({ type: "none" });
 		setInputValue("");
@@ -155,6 +157,14 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 			breadcrumbs={["Boards", board.name, task.title]}
 			hints={detailHints}
 		>
+			{board.source === "linear" && (
+				<Text attributes={DIM}>
+					{isSyncing
+						? "Syncing Linear…"
+						: `${task.linear_identifier} • Comments and tags are local`}
+				</Text>
+			)}
+			{error && <Text fg={inkColor("red")}>{error}</Text>}
 			<box flexDirection="row" gap={1}>
 				<box flexDirection="column" width={leftWidth}>
 					<Description
@@ -179,6 +189,7 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 					paddingLeft={1}
 				>
 					<Fields
+						project={boardProject(board)}
 						status={task.status}
 						priority={task.priority}
 						dueDate={task.due_date}
@@ -208,6 +219,7 @@ export function DetailView({ boardId, taskId }: DetailViewProps) {
 
 			{modal.type === "editDescription" && (
 				<Modal title="Edit Description" width={60}>
+					{error && <Text fg={inkColor("red")}>{error}</Text>}
 					<Input
 						label="Description"
 						value={inputValue}

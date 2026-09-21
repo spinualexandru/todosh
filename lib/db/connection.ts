@@ -1,7 +1,10 @@
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+
 import { getDatabasePath } from "@utils/paths";
+
+import { migrate } from "./migrate";
 import { SCHEMA } from "./schema";
 
 let db: Database | null = null;
@@ -19,6 +22,7 @@ export function getDatabase(customPath?: string): Database {
 	db = new Database(dbPath, { create: true });
 	db.exec("PRAGMA foreign_keys = ON;");
 	db.exec(SCHEMA);
+	migrate(db);
 
 	return db;
 }

@@ -1,6 +1,7 @@
 import { useTerminalSize } from "@hooks";
 import { inkColor } from "@utils";
 import type { ReactNode } from "react";
+
 import { Footer } from "./footer";
 import { Header } from "./header";
 

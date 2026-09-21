@@ -1,7 +1,9 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+
 import type { Settings } from "@types";
 import { getSettingsPath } from "@utils/paths";
+
 import { defaultSettings } from "./defaults";
 
 const DEFAULT_TOML = `# Todosh Configuration
@@ -25,10 +27,7 @@ enabled = true
 # path = ""  # Uses XDG_DATA_HOME by default
 `;
 
-function deepMerge<T extends Record<string, unknown>>(
-	target: T,
-	source: Partial<T>,
-): T {
+function deepMerge<T extends object>(target: T, source: Partial<T>): T {
 	const result = { ...target };
 	for (const key in source) {
 		const sourceVal = source[key];

@@ -1,5 +1,15 @@
+import {
+	createLinearTask,
+	deleteLinearTask,
+	linkedBoard,
+	updateLinearTask,
+} from "@lib/linear";
+import { cachedTasks } from "@lib/linear/project-filter";
+import { getBoardWorkflow } from "@lib/workflows/board-sync";
 import type { Priority, Tag, Task, TaskStatus, TaskWithTags } from "@types";
-import { useCallback, useEffect, useState } from "react";
+import { useSelector } from "@xstate/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { useDatabase } from "./useDatabase";
 
 interface CreateTaskInput {
@@ -24,15 +34,16 @@ interface UpdateTaskInput {
 export function useTasks(boardId: number) {
 	const db = useDatabase();
 	const [tasks, setTasks] = useState<TaskWithTags[]>([]);
+	const workflow = useMemo(() => getBoardWorkflow(db, boardId), [db, boardId]);
+	const error = useSelector(workflow.actor, (state) => state.context.error);
+	const isSyncing = useSelector(workflow.actor, (state) =>
+		state.matches("working"),
+	);
+	const perform = workflow.run;
 	const [isLoading, setIsLoading] = useState(true);
 
 	const fetchTasks = useCallback(() => {
-		const taskQuery = db.query<Task, [number]>(`
-			SELECT * FROM tasks
-			WHERE board_id = ? AND archived = 0
-			ORDER BY status, position, created_at DESC
-		`);
-		const rawTasks = taskQuery.all(boardId);
+		const rawTasks = cachedTasks(db, boardId);
 
 		const tasksWithTags: TaskWithTags[] = rawTasks.map((task) => {
 			const tagQuery = db.query<Tag, [number]>(`
@@ -48,100 +59,133 @@ export function useTasks(boardId: number) {
 		setIsLoading(false);
 	}, [db, boardId]);
 
+	const refresh = useCallback(
+		() => workflow.actor.send({ type: "REFRESH" }),
+		[workflow],
+	);
 	useEffect(() => {
+		let revision = workflow.actor.getSnapshot().context.revision;
+		const subscription = workflow.actor.subscribe((state) => {
+			if (state.context.revision !== revision) {
+				revision = state.context.revision;
+				fetchTasks();
+			}
+		});
 		fetchTasks();
-	}, [fetchTasks]);
+		workflow.actor.send({ type: "WATCH" });
+		return () => {
+			subscription.unsubscribe();
+			workflow.actor.send({ type: "UNWATCH" });
+		};
+	}, [workflow, fetchTasks]);
 
 	const createTask = useCallback(
-		(input: CreateTaskInput): Task => {
-			const maxPosQuery = db.query<
-				{ maxPos: number | null },
-				[number, string]
-			>(`
+		(input: CreateTaskInput) =>
+			perform(async (signal) => {
+				const board = linkedBoard(db, input.board_id);
+				if (board) {
+					const task = await createLinearTask(
+						db,
+						board,
+						input,
+						undefined,
+						signal,
+					);
+					return task;
+				}
+				const maxPosQuery = db.query<
+					{ maxPos: number | null },
+					[number, string]
+				>(`
 				SELECT MAX(position) as maxPos FROM tasks
 				WHERE board_id = ? AND status = ?
 			`);
-			const result = maxPosQuery.get(input.board_id, input.status ?? "todo");
-			const position = (result?.maxPos ?? -1) + 1;
+				const result = maxPosQuery.get(input.board_id, input.status ?? "todo");
+				const position = (result?.maxPos ?? -1) + 1;
 
-			const stmt = db.query<
-				Task,
-				[number, string, string, string, string, string | null, number]
-			>(`
+				const stmt = db.query<
+					Task,
+					[number, string, string, string, string, string | null, number]
+				>(`
 				INSERT INTO tasks (board_id, title, description, status, priority, due_date, position)
 				VALUES (?, ?, ?, ?, ?, ?, ?)
 				RETURNING *
 			`);
-			const task = stmt.get(
-				input.board_id,
-				input.title,
-				input.description ?? "",
-				input.status ?? "todo",
-				input.priority ?? "medium",
-				input.due_date ?? null,
-				position,
-			);
-			if (!task) throw new Error("Failed to create task");
-			fetchTasks();
-			return task;
-		},
-		[db, fetchTasks],
+				const task = stmt.get(
+					input.board_id,
+					input.title,
+					input.description ?? "",
+					input.status ?? "todo",
+					input.priority ?? "medium",
+					input.due_date ?? null,
+					position,
+				);
+				if (!task) throw new Error("Failed to create task");
+				return task;
+			}),
+		[db, perform],
 	);
 
 	const updateTask = useCallback(
-		(id: number, input: UpdateTaskInput): Task | null => {
-			const updates: string[] = [];
-			const values: (string | number | null)[] = [];
+		(id: number, input: UpdateTaskInput) =>
+			perform(async (signal) => {
+				const existing = db
+					.query<Task, [number]>("SELECT * FROM tasks WHERE id = ?")
+					.get(id);
+				if (existing && linkedBoard(db, existing.board_id))
+					await updateLinearTask(db, existing, input, undefined, signal);
+				signal.throwIfAborted();
+				const updates: string[] = [];
+				const values: (string | number | null)[] = [];
 
-			if (input.title !== undefined) {
-				updates.push("title = ?");
-				values.push(input.title);
-			}
-			if (input.description !== undefined) {
-				updates.push("description = ?");
-				values.push(input.description);
-			}
-			if (input.status !== undefined) {
-				updates.push("status = ?");
-				values.push(input.status);
-			}
-			if (input.priority !== undefined) {
-				updates.push("priority = ?");
-				values.push(input.priority);
-			}
-			if (input.due_date !== undefined) {
-				updates.push("due_date = ?");
-				values.push(input.due_date);
-			}
-			if (input.position !== undefined) {
-				updates.push("position = ?");
-				values.push(input.position);
-			}
-			if (input.archived !== undefined) {
-				updates.push("archived = ?");
-				values.push(input.archived ? 1 : 0);
-			}
+				if (input.title !== undefined) {
+					updates.push("title = ?");
+					values.push(input.title);
+				}
+				if (input.description !== undefined) {
+					updates.push("description = ?");
+					values.push(input.description);
+				}
+				if (input.status !== undefined) {
+					updates.push("status = ?");
+					values.push(input.status);
+				}
+				if (input.priority !== undefined) {
+					updates.push("priority = ?");
+					values.push(input.priority);
+				}
+				if (input.due_date !== undefined) {
+					updates.push("due_date = ?");
+					values.push(input.due_date);
+				}
+				if (input.position !== undefined) {
+					updates.push("position = ?");
+					values.push(input.position);
+				}
+				if (input.archived !== undefined) {
+					updates.push("archived = ?");
+					values.push(input.archived ? 1 : 0);
+				}
 
-			if (updates.length === 0) return null;
+				if (updates.length === 0) return null;
 
-			updates.push("updated_at = datetime('now')");
-			values.push(id);
+				updates.push("updated_at = datetime('now')");
+				values.push(id);
 
-			const stmt = db.query<Task, (string | number | null)[]>(`
+				const stmt = db.query<Task, (string | number | null)[]>(`
 				UPDATE tasks
 				SET ${updates.join(", ")}
 				WHERE id = ?
 				RETURNING *
 			`);
-			const task = stmt.get(...values);
-			fetchTasks();
-			return task ?? null;
-		},
-		[db, fetchTasks],
+				const task = stmt.get(...values);
+				return task ?? null;
+			}),
+		[db, perform],
 	);
 
 	const moveTask = useCallback(
-		(id: number, newStatus: TaskStatus, newPosition?: number): Task | null => {
+		(id: number, newStatus: TaskStatus, newPosition?: number) => {
 			const task = tasks.find((t) => t.id === id);
 			if (!task) return null;
 
@@ -150,6 +194,8 @@ export function useTasks(boardId: number) {
 			);
 			const pos = newPosition ?? targetTasks.length;
 
+			if (linkedBoard(db, task.board_id))
+				return updateTask(id, { status: newStatus });
 			targetTasks.forEach((t, i) => {
 				if (i >= pos) {
 					db.query(`UPDATE tasks SET position = ? WHERE id = ?`).run(
@@ -165,19 +211,22 @@ export function useTasks(boardId: number) {
 	);
 
 	const deleteTask = useCallback(
-		(id: number): boolean => {
-			db.query(`DELETE FROM tasks WHERE id = ?`).run(id);
-			fetchTasks();
-			return true;
-		},
-		[db, fetchTasks],
+		(id: number) =>
+			perform(async (signal) => {
+				const existing = db
+					.query<Task, [number]>("SELECT * FROM tasks WHERE id = ?")
+					.get(id);
+				if (existing && linkedBoard(db, existing.board_id))
+					await deleteLinearTask(db, existing, undefined, signal);
+				signal.throwIfAborted();
+				db.query(`DELETE FROM tasks WHERE id = ?`).run(id);
+				return true;
+			}),
+		[db, perform],
 	);
 
 	const archiveTask = useCallback(
-		(id: number): boolean => {
-			updateTask(id, { archived: true });
-			return true;
-		},
+		(id: number) => updateTask(id, { archived: true }),
 		[updateTask],
 	);
 
@@ -242,6 +291,8 @@ export function useTasks(boardId: number) {
 		tasks,
 		tasksByStatus,
 		isLoading,
+		error,
+		isSyncing,
 		createTask,
 		updateTask,
 		moveTask,
@@ -249,6 +300,6 @@ export function useTasks(boardId: number) {
 		archiveTask,
 		getTask,
 		setTaskTags,
-		refresh: fetchTasks,
+		refresh,
 	};
 }

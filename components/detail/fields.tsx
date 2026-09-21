@@ -3,6 +3,7 @@ import type { Priority, Tag, TaskStatus } from "@types";
 import { BOLD, DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface FieldsProps {
+	project: string;
 	status: TaskStatus;
 	priority: Priority;
 	dueDate: string | null;
@@ -32,6 +33,7 @@ const priorityColors: Record<Priority, string> = {
 };
 
 export function Fields({
+	project,
 	status,
 	priority,
 	dueDate,
@@ -54,6 +56,10 @@ export function Fields({
 					Details
 				</Text>
 			</box>
+
+			<Field label="Project">
+				<Text>{project}</Text>
+			</Field>
 
 			<Field label="Status">
 				<Text fg={inkColor(statusColors[status])}>

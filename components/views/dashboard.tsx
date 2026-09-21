@@ -1,8 +1,10 @@
 import { Confirm, Input, Modal, Text } from "@components/common";
+import { CreateBoardModal } from "@components/common/create-board-modal";
 import { Shell } from "@components/layout";
 import { useBoards, useKeymap, useQuit, useRouter, useSettings } from "@hooks";
 import type { BoardWithStats } from "@types";
 import { DIM, fallbackGlyphs, glyphs, inkColor, selection } from "@utils";
+import { boardProject } from "@utils/board-project";
 import { useEffect, useState } from "react";
 
 type ModalState =
@@ -32,6 +34,7 @@ export function DashboardView() {
 		updateBoard,
 		deleteBoard,
 		archiveBoard,
+		refresh,
 	} = useBoards();
 	const { navigate } = useRouter();
 	const { settings, updateSettings } = useSettings();
@@ -164,19 +167,14 @@ export function DashboardView() {
 			)}
 
 			{modal.type === "create" && (
-				<Modal title="Create Board">
-					<Input
-						label="Name"
-						value={inputValue}
-						onChange={setInputValue}
-						onSubmit={handleCreateSubmit}
-						onCancel={() => setModal({ type: "none" })}
-						placeholder="Enter board name..."
-					/>
-					<box marginTop={1}>
-						<Text attributes={DIM}>Enter to create • Esc to cancel</Text>
-					</box>
-				</Modal>
+				<CreateBoardModal
+					onLocal={handleCreateSubmit}
+					onConnected={() => {
+						refresh();
+						setModal({ type: "none" });
+					}}
+					onCancel={() => setModal({ type: "none" })}
+				/>
 			)}
 
 			{modal.type === "edit" && (
@@ -197,7 +195,11 @@ export function DashboardView() {
 			{modal.type === "delete" && (
 				<Confirm
 					title="Delete Board"
-					message={`Delete "${modal.board.name}" and all its tasks?`}
+					message={
+						modal.board.source === "linear"
+							? `Disconnect "${modal.board.name}"? Linear issues will be kept.`
+							: `Delete "${modal.board.name}" and all its tasks?`
+					}
 					onConfirm={handleDeleteConfirm}
 					onCancel={() => setModal({ type: "none" })}
 					confirmLabel="Delete"
@@ -222,7 +224,7 @@ interface BoardItemProps {
 	board: BoardWithStats;
 	isSelected: boolean;
 	isPinned: boolean;
-	icons: typeof glyphs;
+	icons: typeof glyphs | typeof fallbackGlyphs;
 }
 
 function BoardItem({ board, isSelected, isPinned, icons }: BoardItemProps) {
@@ -230,8 +232,10 @@ function BoardItem({ board, isSelected, isPinned, icons }: BoardItemProps) {
 		<box flexDirection="row" paddingX={1}>
 			<Text {...selection(isSelected, "cyan")}>
 				{" "}
-				{icons.board} {board.name}{" "}
+				{icons.board} {board.name}
+				{board.source === "linear" ? " [Linear]" : ""}{" "}
 			</Text>
+			<Text attributes={DIM}> Project: {boardProject(board)} </Text>
 			{isPinned && <Text fg={inkColor("yellow")}> {icons.pin}</Text>}
 			<box flexDirection="row" marginLeft={1} gap={2}>
 				<Text attributes={DIM}>

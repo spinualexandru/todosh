@@ -1,10 +1,29 @@
 import { getDatabase } from "@lib/db/connection";
+import { linkedBoard } from "@lib/linear";
 import type { Board, Task } from "@types";
+
 import { error, type IpcRequest, type IpcResponse, success } from "./protocol";
 
 export function handleRequest(request: IpcRequest): IpcResponse {
 	const db = getDatabase();
 
+	if (request.type === "tasks:create" && linkedBoard(db, request.boardId)) {
+		return error(
+			"Use the TUI or CLI to create Linear issues; IPC supports cached reads only for Linear boards.",
+		);
+	}
+	if (
+		["tasks:update", "tasks:move", "tasks:delete"].includes(request.type) &&
+		"id" in request
+	) {
+		const task = db
+			.query<Task, [number]>("SELECT * FROM tasks WHERE id = ?")
+			.get(request.id);
+		if (task && linkedBoard(db, task.board_id))
+			return error(
+				"Use the TUI or CLI to change Linear issues; IPC supports cached reads only for Linear boards.",
+			);
+	}
 	switch (request.type) {
 		case "ping":
 			return success({ pong: true, pid: process.pid });
