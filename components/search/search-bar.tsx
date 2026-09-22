@@ -1,11 +1,15 @@
 import { Text } from "@components/common";
 import { useEscapeKey, useInputFocus } from "@hooks";
+import { useKeys } from "@hooks/useKeys";
 import { DIM, fallbackGlyphs, glyphs, inkColor } from "@utils";
 
 interface SearchBarProps {
 	value: string;
 	onChange: (value: string) => void;
 	onClose: () => void;
+	onUp?: () => void;
+	onDown?: () => void;
+	onSelect?: () => void;
 	resultCount: number;
 	useNerdfonts: boolean;
 }
@@ -14,6 +18,9 @@ export function SearchBar({
 	value,
 	onChange,
 	onClose,
+	onUp,
+	onDown,
+	onSelect,
 	resultCount,
 	useNerdfonts,
 }: SearchBarProps) {
@@ -21,6 +28,8 @@ export function SearchBar({
 
 	useInputFocus(true);
 	useEscapeKey(onClose);
+	// Bind literal keys so Vim's j/k remain available for typing the query.
+	useKeys({ up: onUp, down: onDown, return: onSelect });
 
 	return (
 		<box
@@ -41,7 +50,9 @@ export function SearchBar({
 				cursorColor={inkColor("cyan")}
 			/>
 			<Text attributes={DIM}>
-				{resultCount} result{resultCount !== 1 ? "s" : ""} • Esc to close
+				{resultCount} result{resultCount !== 1 ? "s" : ""}
+				{onUp && onDown ? " • ↑/↓ navigate" : ""}
+				{onSelect ? " • Enter to open" : ""} • Esc to close
 			</Text>
 		</box>
 	);

@@ -142,23 +142,23 @@ export function TableView({ boardId }: TableViewProps) {
 		];
 	}, [termCols]);
 
+	const selectPreviousTask = () => setSelectedIndex((i) => Math.max(0, i - 1));
+	const selectNextTask = () =>
+		setSelectedIndex((i) =>
+			Math.min(Math.max(0, filteredTasks.length - 1), i + 1),
+		);
+	const openSelectedTask = () => {
+		if (selectedTask) {
+			navigate({ view: "detail", boardId, taskId: selectedTask.id });
+		}
+	};
+
 	useKeymap({
 		isActive: !isInputActive,
 		handlers: {
-			onUp: () => setSelectedIndex((i) => Math.max(0, i - 1)),
-			onDown: () =>
-				setSelectedIndex((i) =>
-					Math.min(Math.max(0, filteredTasks.length - 1), i + 1),
-				),
-			onSelect: () => {
-				if (selectedTask) {
-					navigate({
-						view: "detail",
-						boardId,
-						taskId: selectedTask.id,
-					});
-				}
-			},
+			onUp: selectPreviousTask,
+			onDown: selectNextTask,
+			onSelect: openSelectedTask,
 			onNew: () => {
 				setInputValue("");
 				setModal({ type: "create" });
@@ -291,6 +291,9 @@ export function TableView({ boardId }: TableViewProps) {
 					value={query}
 					onChange={setQuery}
 					onClose={closeSearch}
+					onUp={selectPreviousTask}
+					onDown={selectNextTask}
+					onSelect={openSelectedTask}
 					resultCount={resultCount}
 					useNerdfonts={settings.ui.useNerdfonts}
 				/>
